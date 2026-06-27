@@ -11,6 +11,7 @@ type EntryFormProps = {
   isOnline: boolean;
   onCancelEdit: () => void;
   onSubmit: (payload: EntryPayload) => Promise<void>;
+  isLoading: boolean;
 };
 
 const defaultForm: EntryFormState = {
@@ -28,6 +29,7 @@ export default function EntryForm({
   isOnline,
   onCancelEdit,
   onSubmit,
+  isLoading,
 }: EntryFormProps) {
   const [form, setForm] = useState<EntryFormState>(defaultForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +47,53 @@ export default function EntryForm({
       });
     }
   }, [editingEntry]);
+
+  if (isLoading) {
+    return (
+      <section
+        className="card"
+        aria-busy="true"
+        aria-label="Loading entry form"
+      >
+        <div className="section-heading">
+          <div className="entry-form-heading-skeleton">
+            <span className="skeleton-line skeleton-kicker" />
+            <span className="skeleton-line skeleton-heading" />
+          </div>
+        </div>
+
+        <div className="entry-form">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div className="field" key={index}>
+              <span className="skeleton-line skeleton-form-label" />
+              <span className="skeleton-line skeleton-input" />
+            </div>
+          ))}
+
+          <div className="checkbox-field">
+            <span className="skeleton-line skeleton-checkbox" />
+            <span className="skeleton-line skeleton-checkbox-label" />
+          </div>
+
+          <div className="calculated-preview">
+            <div>
+              <span className="skeleton-line skeleton-preview-label" />
+              <strong className="skeleton-line skeleton-preview-value" />
+            </div>
+
+            <div>
+              <span className="skeleton-line skeleton-preview-label" />
+              <strong className="skeleton-line skeleton-preview-value" />
+            </div>
+          </div>
+
+          <div className="actions">
+            <span className="skeleton-line skeleton-button" />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const updateNumber = (
     field: "salesCount" | "cash" | "phonePe" | "expense",

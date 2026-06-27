@@ -10,6 +10,7 @@ type EntryTableProps = {
   year: number;
   onEdit: (entry: DailyEntry) => void;
   onDelete: (entry: DailyEntry) => void;
+  isLoading: boolean;
 };
 
 const MONTH_OPTIONS = [
@@ -34,6 +35,7 @@ export default function EntryTable({
   year,
   onEdit,
   onDelete,
+  isLoading,
 }: EntryTableProps) {
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -114,7 +116,9 @@ export default function EntryTable({
           type="button"
           className="download-report-button"
           onClick={handleDownloadPdf}
-          disabled={!isOnline || isDownloading || entries.length === 0}
+          disabled={
+            !isOnline || isDownloading || entries.length === 0 || isLoading
+          }
           title="Download PDF report"
           aria-label="Download PDF report"
         >
@@ -145,7 +149,13 @@ export default function EntryTable({
         </button>
       </div>
 
-      {entries.length === 0 ? (
+      {isLoading ? (
+        <div
+          className="records-loader"
+          aria-busy="true"
+          aria-label="Loading daily entries"
+        />
+      ) : entries.length === 0 ? (
         <p className="empty-state">No entries found for this month.</p>
       ) : (
         <div className="table-wrapper">

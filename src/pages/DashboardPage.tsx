@@ -167,10 +167,9 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
         </div>
       </section>
 
-      {isLoading ? <p className="status-message">Loading entries...</p> : null}
       {error ? <p className="error-message">{error}</p> : null}
 
-      <SummaryCards summary={summary} />
+      <SummaryCards summary={summary} isLoading={isLoading} />
 
       <div className="dashboard-grid">
         <EntryForm
@@ -178,6 +177,7 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
           isOnline={isOnline}
           onCancelEdit={() => setEditingEntry(null)}
           onSubmit={handleSubmit}
+          isLoading={isLoading}
         />
 
         <EntryTable
@@ -187,6 +187,7 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
           year={year}
           onEdit={setEditingEntry}
           onDelete={handleDelete}
+          isLoading={isLoading}
         />
       </div>
     </main>

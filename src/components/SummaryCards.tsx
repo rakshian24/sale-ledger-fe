@@ -3,9 +3,32 @@ import { formatCurrency } from "../utils/formatters";
 
 type SummaryCardsProps = {
   summary: MonthlySummary;
+  isLoading: boolean;
 };
 
-export default function SummaryCards({ summary }: SummaryCardsProps) {
+const SUMMARY_CARD_COUNT = 6;
+
+export default function SummaryCards({
+  summary,
+  isLoading,
+}: SummaryCardsProps) {
+  if (isLoading) {
+    return (
+      <section
+        className="summary-grid"
+        aria-busy="true"
+        aria-label="Loading summary"
+      >
+        {Array.from({ length: SUMMARY_CARD_COUNT }).map((_, index) => (
+          <article className="summary-card summary-skeleton-card" key={index}>
+            <span className="skeleton-line skeleton-label" />
+            <strong className="skeleton-line skeleton-value" />
+          </article>
+        ))}
+      </section>
+    );
+  }
+
   return (
     <section className="summary-grid">
       <article className="summary-card">
