@@ -255,8 +255,8 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
       <div
         className={
           viewMode === "yearly"
-            ? "dashboard-grid yearly-dashboard-grid"
-            : "dashboard-grid"
+            ? "dashboard-grid yearly-dashboard-grid entry-wrapper"
+            : "dashboard-grid entry-wrapper"
         }
       >
         {viewMode === "monthly" ? (

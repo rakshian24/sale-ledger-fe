@@ -226,6 +226,10 @@ h2 {
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
 }
 
+.entry-wrapper{
+  margin-bottom: 20px;
+}
+
 .auth-form,
 .entry-form {
   display: grid;
@@ -603,6 +607,11 @@ h2 {
 /* Mobile responsive records: table becomes cards */
 
 @media (max-width: 760px) {
+
+  .entry-wrapper{
+    margin-bottom: 50px;
+  }
+
   .records-card {
     padding: 16px;
   }
@@ -1349,4 +1358,81 @@ h2 {
   .custom-select-trigger > span {
     text-overflow: initial;
   }
+}
+
+/* Fix iOS Chrome date input overflow */
+
+.entry-form,
+.entry-form .field {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Apply width fixes to all inputs except checkbox */
+.field input:not([type="checkbox"]),
+.field select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .entry-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .entry-form .field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Apply only to non-checkbox inputs */
+  .entry-form input:not([type="checkbox"]) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .field input[type="date"] {
+    height: 46px;
+  }
+}
+
+/* iOS / WebKit date input fix */
+.field input[type="date"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  -webkit-appearance: none;
+  appearance: none;
+
+  text-align: left;
+  line-height: normal;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+/* Fix iOS Safari/Chrome internal date text alignment */
+.field input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+}
+
+/* Keep calendar icon inside the input */
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+  padding: 0;
+}
+
+/* Keep checkbox size normal */
+.checkbox-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  flex: 0 0 18px;
 }
