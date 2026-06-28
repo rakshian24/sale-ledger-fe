@@ -36,6 +36,14 @@ const MONTH_OPTIONS = [
   "December",
 ];
 
+const getAverage = (total: number, count: number) => {
+  if (count === 0) {
+    return 0;
+  }
+
+  return Math.round(total / count);
+};
+
 export default function EntryTable({
   viewMode,
   entries,
@@ -71,6 +79,42 @@ export default function EntryTable({
         profit: 0,
       },
     );
+  }, [entries]);
+
+  const monthlyAverages = useMemo(() => {
+    const workingEntries = entries.filter((entry) => !entry.isHoliday);
+    const workingDaysCount = workingEntries.length;
+
+    const totals = workingEntries.reduce(
+      (acc, entry) => {
+        acc.salesCount += entry.salesCount ?? 0;
+        acc.cash += entry.cash ?? 0;
+        acc.phonePe += entry.phonePe ?? 0;
+        acc.total += entry.total ?? 0;
+        acc.expense += entry.expense ?? 0;
+        acc.profit += entry.profit ?? 0;
+
+        return acc;
+      },
+      {
+        salesCount: 0,
+        cash: 0,
+        phonePe: 0,
+        total: 0,
+        expense: 0,
+        profit: 0,
+      },
+    );
+
+    return {
+      workingDaysCount,
+      salesCount: getAverage(totals.salesCount, workingDaysCount),
+      cash: getAverage(totals.cash, workingDaysCount),
+      phonePe: getAverage(totals.phonePe, workingDaysCount),
+      total: getAverage(totals.total, workingDaysCount),
+      expense: getAverage(totals.expense, workingDaysCount),
+      profit: getAverage(totals.profit, workingDaysCount),
+    };
   }, [entries]);
 
   const isMonthlyView = viewMode === "monthly";
@@ -184,125 +228,180 @@ export default function EntryTable({
       ) : isYearlyView && !hasYearlyData ? (
         <p className="empty-state">No entries found for this year.</p>
       ) : isMonthlyView ? (
-        <div className="table-wrapper">
-          <table className="entries-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Sales</th>
-                <th>Cash</th>
-                <th>PhonePe</th>
-                <th>Total</th>
-                <th>Expense</th>
-                <th>Profit</th>
-                <th>Note</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+        <>
+          <section className="average-strip" aria-label="Daily averages">
+            <div className="average-strip-heading">
+              <div>
+                <span>Daily Averages</span>
+                <small>
+                  Based on {monthlyAverages.workingDaysCount} working days
+                </small>
+              </div>
+            </div>
 
-            <tbody>
-              {entries.map((entry) => (
-                <tr
-                  key={entry._id}
-                  className={entry.isHoliday ? "holiday-row" : ""}
-                >
-                  <td data-label="Date">
-                    <div className="date-cell">
-                      <strong>{formatDate(entry.date)}</strong>
+            <div className="average-item">
+              <span>Avg Sales</span>
+              <strong>{monthlyAverages.salesCount}</strong>
+            </div>
 
-                      {entry.isHoliday ? (
-                        <span className="tag">Holiday</span>
-                      ) : null}
-                    </div>
+            <div className="average-item">
+              <span>Avg Cash</span>
+              <strong>{formatCurrency(monthlyAverages.cash)}</strong>
+            </div>
+
+            <div className="average-item">
+              <span>Avg PhonePe</span>
+              <strong>{formatCurrency(monthlyAverages.phonePe)}</strong>
+            </div>
+
+            <div className="average-item">
+              <span>Avg Total</span>
+              <strong>{formatCurrency(monthlyAverages.total)}</strong>
+            </div>
+
+            <div className="average-item">
+              <span>Avg Expense</span>
+              <strong>{formatCurrency(monthlyAverages.expense)}</strong>
+            </div>
+
+            <div
+              className={
+                monthlyAverages.profit >= 0
+                  ? "average-item average-profit"
+                  : "average-item average-loss"
+              }
+            >
+              <span>Avg Profit</span>
+              <strong>{formatCurrency(monthlyAverages.profit)}</strong>
+            </div>
+          </section>
+
+          <div className="table-wrapper">
+            <table className="entries-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Sales</th>
+                  <th>Cash</th>
+                  <th>PhonePe</th>
+                  <th>Total</th>
+                  <th>Expense</th>
+                  <th>Profit</th>
+                  <th>Note</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {entries.map((entry) => (
+                  <tr
+                    key={entry._id}
+                    className={entry.isHoliday ? "holiday-row" : ""}
+                  >
+                    <td data-label="Date">
+                      <div className="date-cell">
+                        <strong>{formatDate(entry.date)}</strong>
+
+                        {entry.isHoliday ? (
+                          <span className="tag">Holiday</span>
+                        ) : null}
+                      </div>
+                    </td>
+
+                    <td data-label="Sales">{entry.salesCount ?? 0}</td>
+
+                    <td data-label="Cash">{formatCurrency(entry.cash)}</td>
+
+                    <td data-label="PhonePe">
+                      {formatCurrency(entry.phonePe)}
+                    </td>
+
+                    <td data-label="Total">{formatCurrency(entry.total)}</td>
+
+                    <td data-label="Expense">
+                      {formatCurrency(entry.expense)}
+                    </td>
+
+                    <td
+                      data-label="Profit"
+                      className={
+                        entry.profit >= 0 ? "profit-text" : "loss-text"
+                      }
+                    >
+                      {formatCurrency(entry.profit)}
+                    </td>
+
+                    <td data-label="Note" className="note-cell">
+                      {entry.note || "-"}
+                    </td>
+
+                    <td data-label="Actions">
+                      <div className="table-actions">
+                        <button
+                          type="button"
+                          disabled={!isOnline}
+                          onClick={() => onEdit(entry)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!isOnline}
+                          className="danger-button"
+                          onClick={() => onDelete(entry)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+
+              <tfoot>
+                <tr className="total-row">
+                  <td data-label="Summary">
+                    <strong>Totals</strong>
                   </td>
 
-                  <td data-label="Sales">{entry.salesCount ?? 0}</td>
+                  <td data-label="Total Sales">
+                    <strong>{monthlyTotals.salesCount}</strong>
+                  </td>
 
-                  <td data-label="Cash">{formatCurrency(entry.cash)}</td>
+                  <td data-label="Total Cash">
+                    <strong>{formatCurrency(monthlyTotals.cash)}</strong>
+                  </td>
 
-                  <td data-label="PhonePe">{formatCurrency(entry.phonePe)}</td>
+                  <td data-label="Total PhonePe">
+                    <strong>{formatCurrency(monthlyTotals.phonePe)}</strong>
+                  </td>
 
-                  <td data-label="Total">{formatCurrency(entry.total)}</td>
+                  <td data-label="Total Collection">
+                    <strong>{formatCurrency(monthlyTotals.total)}</strong>
+                  </td>
 
-                  <td data-label="Expense">{formatCurrency(entry.expense)}</td>
+                  <td data-label="Total Expense">
+                    <strong>{formatCurrency(monthlyTotals.expense)}</strong>
+                  </td>
 
                   <td
-                    data-label="Profit"
-                    className={entry.profit >= 0 ? "profit-text" : "loss-text"}
+                    data-label="Total Profit"
+                    className={
+                      monthlyTotals.profit >= 0 ? "profit-text" : "loss-text"
+                    }
                   >
-                    {formatCurrency(entry.profit)}
+                    <strong>{formatCurrency(monthlyTotals.profit)}</strong>
                   </td>
 
-                  <td data-label="Note" className="note-cell">
-                    {entry.note || "-"}
-                  </td>
+                  <td className="total-empty-cell" />
 
-                  <td data-label="Actions">
-                    <div className="table-actions">
-                      <button
-                        type="button"
-                        disabled={!isOnline}
-                        onClick={() => onEdit(entry)}
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={!isOnline}
-                        className="danger-button"
-                        onClick={() => onDelete(entry)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+                  <td className="total-empty-cell" />
                 </tr>
-              ))}
-            </tbody>
-
-            <tfoot>
-              <tr className="total-row">
-                <td data-label="Summary">
-                  <strong>Totals</strong>
-                </td>
-
-                <td data-label="Total Sales">
-                  <strong>{monthlyTotals.salesCount}</strong>
-                </td>
-
-                <td data-label="Total Cash">
-                  <strong>{formatCurrency(monthlyTotals.cash)}</strong>
-                </td>
-
-                <td data-label="Total PhonePe">
-                  <strong>{formatCurrency(monthlyTotals.phonePe)}</strong>
-                </td>
-
-                <td data-label="Total Collection">
-                  <strong>{formatCurrency(monthlyTotals.total)}</strong>
-                </td>
-
-                <td data-label="Total Expense">
-                  <strong>{formatCurrency(monthlyTotals.expense)}</strong>
-                </td>
-
-                <td
-                  data-label="Total Profit"
-                  className={
-                    monthlyTotals.profit >= 0 ? "profit-text" : "loss-text"
-                  }
-                >
-                  <strong>{formatCurrency(monthlyTotals.profit)}</strong>
-                </td>
-
-                <td className="total-empty-cell" />
-
-                <td className="total-empty-cell" />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+              </tfoot>
+            </table>
+          </div>
+        </>
       ) : (
         <div className="table-wrapper">
           <table className="entries-table yearly-entries-table">
