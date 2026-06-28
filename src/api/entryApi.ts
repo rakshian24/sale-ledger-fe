@@ -1,5 +1,9 @@
 import { API_BASE_URL, apiClient, getToken } from "./apiClient";
-import type { DailyEntry, EntryPayload } from "../types/entry";
+import type {
+  DailyEntry,
+  EntryPayload,
+  YearlySummaryResponse,
+} from "../types/entry";
 
 export const getEntries = async (month: number, year: number) => {
   const response = await apiClient<{ entries: DailyEntry[] }>(
@@ -7,6 +11,14 @@ export const getEntries = async (month: number, year: number) => {
   );
 
   return response.entries;
+};
+
+export const getYearlySummary = async (year: number) => {
+  const response = await apiClient<YearlySummaryResponse>(
+    `/entries/summary/yearly?year=${year}`,
+  );
+
+  return response;
 };
 
 export const createEntry = async (payload: EntryPayload) => {

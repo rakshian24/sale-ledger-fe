@@ -1,10 +1,18 @@
 import { useMemo, useState } from "react";
 import { downloadEntriesPdfReport } from "../api/entryApi";
-import type { DailyEntry } from "../types/entry";
+import type {
+  DailyEntry,
+  MonthlySummary,
+  ViewMode,
+  YearlyMonthSummary,
+} from "../types/entry";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
 type EntryTableProps = {
+  viewMode: ViewMode;
   entries: DailyEntry[];
+  yearlyRows: YearlyMonthSummary[];
+  summary: MonthlySummary;
   isOnline: boolean;
   month: number;
   year: number;
@@ -29,7 +37,10 @@ const MONTH_OPTIONS = [
 ];
 
 export default function EntryTable({
+  viewMode,
   entries,
+  yearlyRows,
+  summary,
   isOnline,
   month,
   year,
@@ -39,7 +50,7 @@ export default function EntryTable({
 }: EntryTableProps) {
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const totals = useMemo(() => {
+  const monthlyTotals = useMemo(() => {
     return entries.reduce(
       (acc, entry) => {
         acc.salesCount += entry.salesCount ?? 0;
@@ -61,6 +72,17 @@ export default function EntryTable({
       },
     );
   }, [entries]);
+
+  const isMonthlyView = viewMode === "monthly";
+  const isYearlyView = viewMode === "yearly";
+
+  const hasYearlyData =
+    summary.totalSales > 0 ||
+    summary.totalCash > 0 ||
+    summary.totalPhonePe > 0 ||
+    summary.totalCollection > 0 ||
+    summary.totalExpense > 0 ||
+    summary.totalProfit !== 0;
 
   const handleDownloadPdf = async () => {
     if (!isOnline) {
@@ -109,55 +131,59 @@ export default function EntryTable({
       <div className="section-heading records-heading">
         <div>
           <p className="section-kicker">Records</p>
-          <h2>Daily Entries</h2>
+          <h2>{isMonthlyView ? "Daily Entries" : "Monthly Summary"}</h2>
         </div>
 
-        <button
-          type="button"
-          className="download-report-button"
-          onClick={handleDownloadPdf}
-          disabled={
-            !isOnline || isDownloading || entries.length === 0 || isLoading
-          }
-          title="Download PDF report"
-          aria-label="Download PDF report"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
+        {isMonthlyView ? (
+          <button
+            type="button"
+            className="download-report-button"
+            onClick={handleDownloadPdf}
+            disabled={
+              !isOnline || isDownloading || entries.length === 0 || isLoading
+            }
+            title="Download PDF report"
+            aria-label="Download PDF report"
           >
-            <path
-              d="M12 3V15M12 15L7 10M12 15L17 10"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M5 19H19"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            />
-          </svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 3V15M12 15L7 10M12 15L17 10"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5 19H19"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
 
-          <span>{isDownloading ? "Downloading..." : "Download Report"}</span>
-        </button>
+            <span>{isDownloading ? "Downloading..." : "Download Report"}</span>
+          </button>
+        ) : null}
       </div>
 
       {isLoading ? (
         <div
           className="records-loader"
           aria-busy="true"
-          aria-label="Loading daily entries"
+          aria-label="Loading entries"
         />
-      ) : entries.length === 0 ? (
+      ) : isMonthlyView && entries.length === 0 ? (
         <p className="empty-state">No entries found for this month.</p>
-      ) : (
+      ) : isYearlyView && !hasYearlyData ? (
+        <p className="empty-state">No entries found for this year.</p>
+      ) : isMonthlyView ? (
         <div className="table-wrapper">
           <table className="entries-table">
             <thead>
@@ -242,35 +268,125 @@ export default function EntryTable({
                 </td>
 
                 <td data-label="Total Sales">
-                  <strong>{totals.salesCount}</strong>
+                  <strong>{monthlyTotals.salesCount}</strong>
                 </td>
 
                 <td data-label="Total Cash">
-                  <strong>{formatCurrency(totals.cash)}</strong>
+                  <strong>{formatCurrency(monthlyTotals.cash)}</strong>
                 </td>
 
                 <td data-label="Total PhonePe">
-                  <strong>{formatCurrency(totals.phonePe)}</strong>
+                  <strong>{formatCurrency(monthlyTotals.phonePe)}</strong>
                 </td>
 
                 <td data-label="Total Collection">
-                  <strong>{formatCurrency(totals.total)}</strong>
+                  <strong>{formatCurrency(monthlyTotals.total)}</strong>
                 </td>
 
                 <td data-label="Total Expense">
-                  <strong>{formatCurrency(totals.expense)}</strong>
+                  <strong>{formatCurrency(monthlyTotals.expense)}</strong>
                 </td>
 
                 <td
                   data-label="Total Profit"
-                  className={totals.profit >= 0 ? "profit-text" : "loss-text"}
+                  className={
+                    monthlyTotals.profit >= 0 ? "profit-text" : "loss-text"
+                  }
                 >
-                  <strong>{formatCurrency(totals.profit)}</strong>
+                  <strong>{formatCurrency(monthlyTotals.profit)}</strong>
                 </td>
 
                 <td className="total-empty-cell" />
 
                 <td className="total-empty-cell" />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : (
+        <div className="table-wrapper">
+          <table className="entries-table yearly-entries-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Sales</th>
+                <th>Cash</th>
+                <th>PhonePe</th>
+                <th>Total</th>
+                <th>Expense</th>
+                <th>Profit</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {yearlyRows.map((row) => (
+                <tr key={row.month}>
+                  <td data-label="Month">
+                    <strong>{row.monthName}</strong>
+                  </td>
+
+                  <td data-label="Sales">{row.totalSales}</td>
+
+                  <td data-label="Cash">{formatCurrency(row.totalCash)}</td>
+
+                  <td data-label="PhonePe">
+                    {formatCurrency(row.totalPhonePe)}
+                  </td>
+
+                  <td data-label="Total">
+                    {formatCurrency(row.totalCollection)}
+                  </td>
+
+                  <td data-label="Expense">
+                    {formatCurrency(row.totalExpense)}
+                  </td>
+
+                  <td
+                    data-label="Profit"
+                    className={
+                      row.totalProfit >= 0 ? "profit-text" : "loss-text"
+                    }
+                  >
+                    {formatCurrency(row.totalProfit)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+
+            <tfoot>
+              <tr className="total-row">
+                <td data-label="Summary">
+                  <strong>Totals</strong>
+                </td>
+
+                <td data-label="Total Sales">
+                  <strong>{summary.totalSales}</strong>
+                </td>
+
+                <td data-label="Total Cash">
+                  <strong>{formatCurrency(summary.totalCash)}</strong>
+                </td>
+
+                <td data-label="Total PhonePe">
+                  <strong>{formatCurrency(summary.totalPhonePe)}</strong>
+                </td>
+
+                <td data-label="Total Collection">
+                  <strong>{formatCurrency(summary.totalCollection)}</strong>
+                </td>
+
+                <td data-label="Total Expense">
+                  <strong>{formatCurrency(summary.totalExpense)}</strong>
+                </td>
+
+                <td
+                  data-label="Total Profit"
+                  className={
+                    summary.totalProfit >= 0 ? "profit-text" : "loss-text"
+                  }
+                >
+                  <strong>{formatCurrency(summary.totalProfit)}</strong>
+                </td>
               </tr>
             </tfoot>
           </table>

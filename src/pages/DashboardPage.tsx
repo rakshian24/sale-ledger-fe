@@ -4,6 +4,7 @@ import {
   createEntry,
   deleteEntry,
   getEntries,
+  getYearlySummary,
   updateEntry,
 } from "../api/entryApi";
 import EntryForm from "../components/EntryForm";
@@ -14,7 +15,13 @@ import SummaryCards from "../components/SummaryCards";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import type { User } from "../types/auth";
-import type { DailyEntry, EntryPayload } from "../types/entry";
+import type {
+  DailyEntry,
+  EntryPayload,
+  MonthlySummary,
+  ViewMode,
+  YearlyMonthSummary,
+} from "../types/entry";
 import { calculateMonthlySummary } from "../utils/calculations";
 import CustomSelect from "../components/CustomSelect";
 
@@ -25,6 +32,11 @@ type DashboardPageProps = {
 
 const getCurrentMonth = () => new Date().getMonth() + 1;
 const getCurrentYear = () => new Date().getFullYear();
+
+const VIEW_MODE_OPTIONS: { label: string; value: ViewMode }[] = [
+  { label: "Monthly View", value: "monthly" },
+  { label: "Yearly View", value: "yearly" },
+];
 
 const MONTH_OPTIONS = [
   { label: "January", value: 1 },
@@ -51,53 +63,112 @@ const getYearOptions = () => {
   }));
 };
 
+const EMPTY_SUMMARY: MonthlySummary = {
+  totalSales: 0,
+  totalCash: 0,
+  totalPhonePe: 0,
+  totalCollection: 0,
+  totalExpense: 0,
+  totalProfit: 0,
+};
+
 export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
   const isOnline = useOnlineStatus();
 
+  const [viewMode, setViewMode] = useState<ViewMode>("monthly");
   const [month, setMonth] = useState(getCurrentMonth());
   const [year, setYear] = useState(getCurrentYear());
 
   const yearOptions = useMemo(() => getYearOptions(), []);
 
-  const cacheKey = `saleledger-cache-${user.id}-${year}-${month}`;
+  const monthlyCacheKey = `saleledger-cache-monthly-${user.id}-${year}-${month}`;
+  const yearlyCacheKey = `saleledger-cache-yearly-${user.id}-${year}`;
 
   const [cachedEntries, setCachedEntries] = useLocalStorage<DailyEntry[]>(
-    cacheKey,
+    monthlyCacheKey,
     [],
   );
 
+  const [cachedYearlyRows, setCachedYearlyRows] = useLocalStorage<
+    YearlyMonthSummary[]
+  >(yearlyCacheKey, []);
+
   const [entries, setEntries] = useState<DailyEntry[]>(cachedEntries);
+  const [yearlyRows, setYearlyRows] =
+    useState<YearlyMonthSummary[]>(cachedYearlyRows);
+
   const [editingEntry, setEditingEntry] = useState<DailyEntry | null>(null);
+  const [yearlySummary, setYearlySummary] =
+    useState<MonthlySummary>(EMPTY_SUMMARY);
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchEntries = async () => {
+  const fetchMonthlyEntries = async () => {
     if (!isOnline) {
       setEntries(cachedEntries);
       return;
     }
 
+    const serverEntries = await getEntries(month, year);
+
+    setEntries(serverEntries);
+    setCachedEntries(serverEntries);
+  };
+
+  const fetchYearlyEntries = async () => {
+    if (!isOnline) {
+      setYearlyRows(cachedYearlyRows);
+      return;
+    }
+
+    const response = await getYearlySummary(year);
+
+    setYearlyRows(response.months);
+    setYearlySummary(response.summary);
+    setCachedYearlyRows(response.months);
+  };
+
+  const fetchDashboardData = async () => {
     setIsLoading(true);
     setError("");
 
     try {
-      const serverEntries = await getEntries(month, year);
-      setEntries(serverEntries);
-      setCachedEntries(serverEntries);
+      if (viewMode === "monthly") {
+        await fetchMonthlyEntries();
+      } else {
+        await fetchYearlyEntries();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to fetch entries");
-      setEntries(cachedEntries);
+
+      if (viewMode === "monthly") {
+        setEntries(cachedEntries);
+      } else {
+        setYearlyRows(cachedYearlyRows);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEntries();
+    fetchDashboardData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, year, isOnline]);
+  }, [viewMode, month, year, isOnline]);
 
-  const summary = useMemo(() => calculateMonthlySummary(entries), [entries]);
+  useEffect(() => {
+    if (viewMode === "yearly") {
+      setEditingEntry(null);
+    }
+  }, [viewMode]);
+
+  const monthlySummary = useMemo(
+    () => calculateMonthlySummary(entries),
+    [entries],
+  );
+
+  const summary = viewMode === "monthly" ? monthlySummary : yearlySummary;
 
   const handleSubmit = async (payload: EntryPayload) => {
     setError("");
@@ -110,7 +181,7 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
         await createEntry(payload);
       }
 
-      await fetchEntries();
+      await fetchDashboardData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save entry");
     }
@@ -127,7 +198,7 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
 
     try {
       await deleteEntry(entry._id);
-      await fetchEntries();
+      await fetchDashboardData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete entry");
     }
@@ -147,16 +218,26 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
       <section className="card filter-card">
         <div className="filter-card-header">
           <p className="section-kicker">Filter</p>
-          <h2>Monthly View</h2>
+          <h2>{viewMode === "monthly" ? "Monthly View" : "Yearly View"}</h2>
         </div>
 
         <div className="filter-controls">
           <CustomSelect
-            label="Month"
-            value={month}
-            options={MONTH_OPTIONS}
-            onChange={setMonth}
+            className="view-select"
+            label="View"
+            value={viewMode}
+            options={VIEW_MODE_OPTIONS}
+            onChange={setViewMode}
           />
+
+          {viewMode === "monthly" ? (
+            <CustomSelect
+              label="Month"
+              value={month}
+              options={MONTH_OPTIONS}
+              onChange={setMonth}
+            />
+          ) : null}
 
           <CustomSelect
             label="Year"
@@ -171,17 +252,28 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
 
       <SummaryCards summary={summary} isLoading={isLoading} />
 
-      <div className="dashboard-grid">
-        <EntryForm
-          editingEntry={editingEntry}
-          isOnline={isOnline}
-          onCancelEdit={() => setEditingEntry(null)}
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
-        />
+      <div
+        className={
+          viewMode === "yearly"
+            ? "dashboard-grid yearly-dashboard-grid"
+            : "dashboard-grid"
+        }
+      >
+        {viewMode === "monthly" ? (
+          <EntryForm
+            editingEntry={editingEntry}
+            isOnline={isOnline}
+            onCancelEdit={() => setEditingEntry(null)}
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+          />
+        ) : null}
 
         <EntryTable
+          viewMode={viewMode}
           entries={entries}
+          yearlyRows={yearlyRows}
+          summary={summary}
           isOnline={isOnline}
           month={month}
           year={year}

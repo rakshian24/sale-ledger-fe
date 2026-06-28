@@ -34,3 +34,16 @@ export type MonthlySummary = {
   totalExpense: number;
   totalProfit: number;
 };
+
+export type ViewMode = "monthly" | "yearly";
+
+export type YearlyMonthSummary = MonthlySummary & {
+  month: number;
+  monthName: string;
+};
+
+export type YearlySummaryResponse = {
+  year: number;
+  summary: MonthlySummary;
+  months: YearlyMonthSummary[];
+};

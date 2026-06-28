@@ -1,33 +1,37 @@
 import { useEffect, useRef, useState } from "react";
 
-type SelectOption = {
+type SelectValue = string | number;
+
+type CustomSelectOption<T extends SelectValue> = {
   label: string;
-  value: number;
+  value: T;
 };
 
-type CustomSelectProps = {
+type CustomSelectProps<T extends SelectValue> = {
   label: string;
-  value: number;
-  options: SelectOption[];
-  onChange: (value: number) => void;
+  value: T;
+  options: CustomSelectOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
 };
 
-export default function CustomSelect({
+export default function CustomSelect<T extends SelectValue>({
   label,
   value,
   options,
   onChange,
-}: CustomSelectProps) {
+  className = "",
+}: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
-  const selectRef = useRef<HTMLDivElement | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   const selectedOption = options.find((option) => option.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        selectRef.current &&
-        !selectRef.current.contains(event.target as Node)
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
       }
@@ -40,30 +44,23 @@ export default function CustomSelect({
     };
   }, []);
 
-  const handleSelect = (nextValue: number) => {
-    onChange(nextValue);
-    setIsOpen(false);
-  };
-
   return (
-    <div className="field custom-select-field" ref={selectRef}>
+    <div className={`field custom-select-field ${className}`} ref={wrapperRef}>
       <span>{label}</span>
 
       <button
         type="button"
-        className={`custom-select-trigger ${isOpen ? "open" : ""}`}
+        className={
+          isOpen ? "custom-select-trigger open" : "custom-select-trigger"
+        }
         onClick={() => setIsOpen((prev) => !prev)}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
       >
-        <span>{selectedOption?.label}</span>
+        <span>{selectedOption?.label ?? "Select"}</span>
+
         <svg
           className="custom-select-caret"
-          width="20"
-          height="20"
           viewBox="0 0 20 20"
           fill="none"
-          xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
           <path
@@ -77,27 +74,28 @@ export default function CustomSelect({
       </button>
 
       {isOpen ? (
-        <div className="custom-select-menu" role="listbox">
-          {options.map((option) => {
-            const isSelected = option.value === value;
+        <div className="custom-select-menu">
+          {options.map((option) => (
+            <button
+              type="button"
+              key={String(option.value)}
+              className={
+                option.value === value
+                  ? "custom-select-option selected"
+                  : "custom-select-option"
+              }
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+            >
+              <span>{option.label}</span>
 
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={`custom-select-option ${
-                  isSelected ? "selected" : ""
-                }`}
-                onClick={() => handleSelect(option.value)}
-                role="option"
-                aria-selected={isSelected}
-              >
-                <span>{option.label}</span>
-
-                {isSelected ? <span className="checkmark">✓</span> : null}
-              </button>
-            );
-          })}
+              {option.value === value ? (
+                <span className="checkmark">✓</span>
+              ) : null}
+            </button>
+          ))}
         </div>
       ) : null}
     </div>

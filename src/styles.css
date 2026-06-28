@@ -1268,3 +1268,85 @@ h2 {
     animation: none;
   }
 }
+
+.yearly-dashboard-grid {
+  grid-template-columns: 1fr;
+}
+
+.yearly-entries-table {
+  min-width: 760px;
+}
+
+.filter-controls {
+  align-items: end;
+}
+
+.view-toggle-controls {
+  display: flex;
+  gap: 12px;
+}
+
+@media (max-width: 980px) {
+  .yearly-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .yearly-entries-table {
+    min-width: 0;
+  }
+}
+
+/* Prevent selected text from wrapping */
+.custom-select-trigger {
+  white-space: nowrap;
+}
+
+.custom-select-trigger > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Give View select enough space for "Monthly View" */
+.view-select {
+  min-width: 230px;
+}
+
+/* Desktop filter layout */
+@media (min-width: 981px) {
+  .filter-controls {
+    min-width: 680px;
+  }
+
+  .filter-controls .view-select {
+    flex: 0 0 230px;
+  }
+
+  .filter-controls .custom-select-field:not(.view-select) {
+    flex: 1;
+  }
+}
+
+/* Tablet */
+@media (max-width: 980px) {
+  .filter-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .view-select {
+    min-width: 0;
+  }
+}
+
+/* Mobile */
+@media (max-width: 560px) {
+  .filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-select-trigger > span {
+    text-overflow: initial;
+  }
+}
