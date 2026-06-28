@@ -105,7 +105,7 @@ export default function EntryTable({
       const url = window.URL.createObjectURL(blob);
 
       const monthName = MONTH_OPTIONS[month - 1] || "monthly";
-      const fileName = `dayledger-${monthName}-${year}-report.pdf`;
+      const fileName = `SaleLedger-${monthName}-${year}-report.pdf`;
 
       const link = document.createElement("a");
       link.href = url;
