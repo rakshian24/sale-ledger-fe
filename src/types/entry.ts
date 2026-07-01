@@ -33,6 +33,8 @@ export type MonthlySummary = {
   totalCollection: number;
   totalExpense: number;
   totalProfit: number;
+  totalFixedExpense?: number;
+  netProfit?: number;
 };
 
 export type ViewMode = "monthly" | "yearly";

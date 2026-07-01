@@ -6,6 +6,7 @@ import type {
   ViewMode,
   YearlyMonthSummary,
 } from "../types/entry";
+import type { FixedMonthlyExpense } from "../types/fixedMonthlyExpense";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
 type EntryTableProps = {
@@ -13,6 +14,7 @@ type EntryTableProps = {
   entries: DailyEntry[];
   yearlyRows: YearlyMonthSummary[];
   summary: MonthlySummary;
+  fixedExpense?: FixedMonthlyExpense | null;
   isOnline: boolean;
   month: number;
   year: number;
@@ -36,6 +38,12 @@ const MONTH_OPTIONS = [
   "December",
 ];
 
+const DEFAULT_FIXED_EXPENSE = {
+  shopRent: 5000,
+  shopkeeperSalary: 10000,
+  electricityBill: 0,
+};
+
 const getAverage = (total: number, count: number) => {
   if (count === 0) {
     return 0;
@@ -44,11 +52,87 @@ const getAverage = (total: number, count: number) => {
   return Math.round(total / count);
 };
 
+function HomeIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 10.75L12 3.5L21 10.75"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.5 9.5V20H18.5V9.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 20V14H14.5V20"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M4.5 20C5.6 16.9 8.4 15 12 15C15.6 15 18.4 16.9 19.5 20"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function LightningIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M13 2L5 14H11L10 22L19 9H13L13 2Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function EntryTable({
   viewMode,
   entries,
   yearlyRows,
   summary,
+  fixedExpense,
   isOnline,
   month,
   year,
@@ -116,6 +200,27 @@ export default function EntryTable({
       profit: getAverage(totals.profit, workingDaysCount),
     };
   }, [entries]);
+
+  const fixedExpenseBreakdown = useMemo(() => {
+    const shopRent = fixedExpense?.shopRent ?? DEFAULT_FIXED_EXPENSE.shopRent;
+
+    const shopkeeperSalary =
+      fixedExpense?.shopkeeperSalary ?? DEFAULT_FIXED_EXPENSE.shopkeeperSalary;
+
+    const electricityBill =
+      fixedExpense?.electricityBill ?? DEFAULT_FIXED_EXPENSE.electricityBill;
+
+    const totalFixedExpense =
+      fixedExpense?.totalFixedExpense ??
+      shopRent + shopkeeperSalary + electricityBill;
+
+    return {
+      shopRent,
+      shopkeeperSalary,
+      electricityBill,
+      totalFixedExpense,
+    };
+  }, [fixedExpense]);
 
   const isMonthlyView = viewMode === "monthly";
   const isYearlyView = viewMode === "yearly";
@@ -273,6 +378,65 @@ export default function EntryTable({
             >
               <span>Avg Profit</span>
               <strong>{formatCurrency(monthlyAverages.profit)}</strong>
+            </div>
+          </section>
+
+          <section
+            className="fixed-expense-breakdown"
+            aria-label="Fixed monthly expenses breakdown"
+          >
+            <div className="fixed-expense-breakdown-title">
+              Fixed Expenses (Monthly Breakdown)
+            </div>
+
+            <div className="fixed-expense-breakdown-grid">
+              <article className="fixed-expense-breakdown-item">
+                <span className="fixed-expense-icon">
+                  <HomeIcon />
+                </span>
+
+                <div>
+                  <span>Rent</span>
+                  <strong>
+                    {formatCurrency(fixedExpenseBreakdown.shopRent)}
+                  </strong>
+                </div>
+              </article>
+
+              <article className="fixed-expense-breakdown-item">
+                <span className="fixed-expense-icon">
+                  <UserIcon />
+                </span>
+
+                <div>
+                  <span>Salary</span>
+                  <strong>
+                    {formatCurrency(fixedExpenseBreakdown.shopkeeperSalary)}
+                  </strong>
+                </div>
+              </article>
+
+              <article className="fixed-expense-breakdown-item">
+                <span className="fixed-expense-icon">
+                  <LightningIcon />
+                </span>
+
+                <div>
+                  <span>Electricity</span>
+                  <strong>
+                    {formatCurrency(fixedExpenseBreakdown.electricityBill)}
+                  </strong>
+                </div>
+              </article>
+
+              <div className="fixed-expense-divider" aria-hidden="true" />
+
+              <article className="fixed-expense-breakdown-total">
+                <span>Total</span>
+                <strong>
+                  {formatCurrency(fixedExpenseBreakdown.totalFixedExpense)}
+                </strong>
+              </article>
             </div>
           </section>
 

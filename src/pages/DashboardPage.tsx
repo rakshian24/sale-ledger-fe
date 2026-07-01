@@ -7,11 +7,16 @@ import {
   getYearlySummary,
   updateEntry,
 } from "../api/entryApi";
+import {
+  getFixedMonthlyExpense,
+  upsertFixedMonthlyExpense,
+} from "../api/fixedExpenseApi";
 import EntryForm from "../components/EntryForm";
 import EntryTable from "../components/EntryTable";
 import Header from "../components/Header";
 import OfflineBanner from "../components/OfflineBanner";
 import SummaryCards from "../components/SummaryCards";
+import CustomSelect from "../components/CustomSelect";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import type { User } from "../types/auth";
@@ -22,8 +27,11 @@ import type {
   ViewMode,
   YearlyMonthSummary,
 } from "../types/entry";
+import type {
+  FixedMonthlyExpense,
+  FixedMonthlyExpensePayload,
+} from "../types/fixedMonthlyExpense";
 import { calculateMonthlySummary } from "../utils/calculations";
-import CustomSelect from "../components/CustomSelect";
 
 type DashboardPageProps = {
   user: User;
@@ -70,6 +78,8 @@ const EMPTY_SUMMARY: MonthlySummary = {
   totalCollection: 0,
   totalExpense: 0,
   totalProfit: 0,
+  totalFixedExpense: 0,
+  netProfit: 0,
 };
 
 export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
@@ -83,6 +93,7 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
 
   const monthlyCacheKey = `saleledger-cache-monthly-${user.id}-${year}-${month}`;
   const yearlyCacheKey = `saleledger-cache-yearly-${user.id}-${year}`;
+  const fixedExpenseCacheKey = `saleledger-cache-fixed-expense-${user.id}-${year}-${month}`;
 
   const [cachedEntries, setCachedEntries] = useLocalStorage<DailyEntry[]>(
     monthlyCacheKey,
@@ -93,9 +104,16 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
     YearlyMonthSummary[]
   >(yearlyCacheKey, []);
 
+  const [cachedFixedExpense, setCachedFixedExpense] =
+    useLocalStorage<FixedMonthlyExpense | null>(fixedExpenseCacheKey, null);
+
   const [entries, setEntries] = useState<DailyEntry[]>(cachedEntries);
   const [yearlyRows, setYearlyRows] =
     useState<YearlyMonthSummary[]>(cachedYearlyRows);
+
+  const [fixedExpense, setFixedExpense] = useState<FixedMonthlyExpense | null>(
+    cachedFixedExpense,
+  );
 
   const [editingEntry, setEditingEntry] = useState<DailyEntry | null>(null);
   const [yearlySummary, setYearlySummary] =
@@ -103,17 +121,25 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isFixedExpenseSaving, setIsFixedExpenseSaving] = useState(false);
 
   const fetchMonthlyEntries = async () => {
     if (!isOnline) {
       setEntries(cachedEntries);
+      setFixedExpense(cachedFixedExpense);
       return;
     }
 
-    const serverEntries = await getEntries(month, year);
+    const [serverEntries, serverFixedExpense] = await Promise.all([
+      getEntries(month, year),
+      getFixedMonthlyExpense(month, year),
+    ]);
 
     setEntries(serverEntries);
     setCachedEntries(serverEntries);
+
+    setFixedExpense(serverFixedExpense);
+    setCachedFixedExpense(serverFixedExpense);
   };
 
   const fetchYearlyEntries = async () => {
@@ -144,6 +170,7 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
 
       if (viewMode === "monthly") {
         setEntries(cachedEntries);
+        setFixedExpense(cachedFixedExpense);
       } else {
         setYearlyRows(cachedYearlyRows);
       }
@@ -163,10 +190,17 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
     }
   }, [viewMode]);
 
-  const monthlySummary = useMemo(
-    () => calculateMonthlySummary(entries),
-    [entries],
-  );
+  const monthlySummary = useMemo(() => {
+    const baseSummary = calculateMonthlySummary(entries);
+
+    const totalFixedExpense = fixedExpense?.totalFixedExpense ?? 0;
+
+    return {
+      ...baseSummary,
+      totalFixedExpense,
+      netProfit: baseSummary.totalProfit - totalFixedExpense,
+    };
+  }, [entries, fixedExpense]);
 
   const summary = viewMode === "monthly" ? monthlySummary : yearlySummary;
 
@@ -184,6 +218,30 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
       await fetchDashboardData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save entry");
+    }
+  };
+
+  const handleSaveFixedExpenses = async (
+    payload: FixedMonthlyExpensePayload,
+  ) => {
+    setError("");
+    setIsFixedExpenseSaving(true);
+
+    try {
+      const savedFixedExpense = await upsertFixedMonthlyExpense(
+        month,
+        year,
+        payload,
+      );
+
+      setFixedExpense(savedFixedExpense);
+      setCachedFixedExpense(savedFixedExpense);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to save fixed expenses",
+      );
+    } finally {
+      setIsFixedExpenseSaving(false);
     }
   };
 
@@ -250,7 +308,17 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
 
       {error ? <p className="error-message">{error}</p> : null}
 
-      <SummaryCards summary={summary} isLoading={isLoading} />
+      <SummaryCards
+        summary={summary}
+        isLoading={isLoading}
+        fixedExpense={viewMode === "monthly" ? fixedExpense : null}
+        totalFixedExpense={
+          viewMode === "yearly" ? (summary.totalFixedExpense ?? 0) : undefined
+        }
+        canEditFixedExpenses={viewMode === "monthly"}
+        isFixedExpenseSaving={isFixedExpenseSaving}
+        onSaveFixedExpenses={handleSaveFixedExpenses}
+      />
 
       <div
         className={
@@ -274,6 +342,7 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
           entries={entries}
           yearlyRows={yearlyRows}
           summary={summary}
+          fixedExpense={viewMode === "monthly" ? fixedExpense : null}
           isOnline={isOnline}
           month={month}
           year={year}
