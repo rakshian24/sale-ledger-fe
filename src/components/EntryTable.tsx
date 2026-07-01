@@ -127,6 +127,133 @@ function LightningIcon() {
   );
 }
 
+function SalesProfitIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 19V13"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 19V8"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M18 19V5"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CalculatorIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="6"
+        y="3.5"
+        width="12"
+        height="17"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M9 7H15"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 11H9.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 11H12.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15 11H15.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 15H9.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 15H12.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15 15H15.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function NetLossIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 7L10 12L14 9L20 15"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 15V10"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M20 15H15"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function EntryTable({
   viewMode,
   entries,
@@ -221,6 +348,9 @@ export default function EntryTable({
       totalFixedExpense,
     };
   }, [fixedExpense]);
+
+  const netProfitAfterFixedExpenses =
+    monthlyTotals.profit - fixedExpenseBreakdown.totalFixedExpense;
 
   const isMonthlyView = viewMode === "monthly";
   const isYearlyView = viewMode === "yearly";
@@ -450,7 +580,7 @@ export default function EntryTable({
                   <th>PhonePe</th>
                   <th>Total</th>
                   <th>Expense</th>
-                  <th>Profit</th>
+                  <th>Sales Profit</th>
                   <th>Note</th>
                   <th>Actions</th>
                 </tr>
@@ -487,7 +617,7 @@ export default function EntryTable({
                     </td>
 
                     <td
-                      data-label="Profit"
+                      data-label="Sales Profit"
                       className={
                         entry.profit >= 0 ? "profit-text" : "loss-text"
                       }
@@ -550,7 +680,7 @@ export default function EntryTable({
                   </td>
 
                   <td
-                    data-label="Total Profit"
+                    data-label="Total Sales Profit"
                     className={
                       monthlyTotals.profit >= 0 ? "profit-text" : "loss-text"
                     }
@@ -558,13 +688,74 @@ export default function EntryTable({
                     <strong>{formatCurrency(monthlyTotals.profit)}</strong>
                   </td>
 
-                  <td className="total-empty-cell" />
+                  <td className="total-empty-cell" data-label="Note">
+                    <strong>-</strong>
+                  </td>
 
-                  <td className="total-empty-cell" />
+                  <td className="total-empty-cell" data-label="Actions">
+                    <strong>-</strong>
+                  </td>
                 </tr>
               </tfoot>
             </table>
           </div>
+
+          <section
+            className="business-summary-panel"
+            aria-label="Business summary after fixed expenses"
+          >
+            <div className="business-summary-heading">
+              <div className="business-summary-heading-left">
+                <span>Business Summary After fixed expenses</span>
+              </div>
+            </div>
+
+            <div className="business-summary-grid">
+              <article className="business-summary-card business-summary-profit">
+                <span className="business-summary-icon">
+                  <SalesProfitIcon />
+                </span>
+
+                <div className="business-summary-content">
+                  <span>Sales Profit (All Entries)</span>
+                  <strong>{formatCurrency(monthlyTotals.profit)}</strong>
+                  <small>Sum of Sales Profit column above</small>
+                </div>
+              </article>
+
+              <article className="business-summary-card business-summary-fixed">
+                <span className="business-summary-icon">
+                  <CalculatorIcon />
+                </span>
+
+                <div className="business-summary-content">
+                  <span>Fixed Monthly Expense</span>
+                  <strong>
+                    {formatCurrency(fixedExpenseBreakdown.totalFixedExpense)}
+                  </strong>
+                  <small>Rent + Salary + Electricity</small>
+                </div>
+              </article>
+
+              <article
+                className={
+                  netProfitAfterFixedExpenses >= 0
+                    ? "business-summary-card business-summary-net business-summary-net-positive"
+                    : "business-summary-card business-summary-net business-summary-net-negative"
+                }
+              >
+                <span className="business-summary-icon">
+                  <NetLossIcon />
+                </span>
+
+                <div className="business-summary-content">
+                  <span>Net Profit After Fixed Expenses</span>
+                  <strong>{formatCurrency(netProfitAfterFixedExpenses)}</strong>
+                  <small>Sales Profit - Fixed Monthly Expense</small>
+                </div>
+              </article>
+            </div>
+          </section>
         </>
       ) : (
         <div className="table-wrapper">
