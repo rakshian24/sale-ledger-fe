@@ -172,7 +172,7 @@ export default function EntryForm({
             value={form.salesCount === 0 ? "" : form.salesCount}
             disabled={!isOnline || form.isHoliday}
             onChange={(event) => updateNumber("salesCount", event.target.value)}
-            placeholder="Example: 25"
+            placeholder="Eg: 25"
           />
         </label>
 
@@ -185,12 +185,12 @@ export default function EntryForm({
             value={form.cash === 0 ? "" : form.cash}
             disabled={!isOnline || form.isHoliday}
             onChange={(event) => updateNumber("cash", event.target.value)}
-            placeholder="Example: 1530"
+            placeholder="Eg: 1530"
           />
         </label>
 
         <label className="field">
-          <span>PhonePe / UPI Collection</span>
+          <span>UPI Collection</span>
           <input
             type="text"
             inputMode="numeric"
@@ -198,7 +198,7 @@ export default function EntryForm({
             value={form.phonePe === 0 ? "" : form.phonePe}
             disabled={!isOnline || form.isHoliday}
             onChange={(event) => updateNumber("phonePe", event.target.value)}
-            placeholder="Example: 525"
+            placeholder="Eg: 525"
           />
         </label>
 
@@ -211,20 +211,25 @@ export default function EntryForm({
             value={form.expense === 0 ? "" : form.expense}
             disabled={!isOnline || form.isHoliday}
             onChange={(event) => updateNumber("expense", event.target.value)}
-            placeholder="Example: 670"
+            placeholder="Eg: 670"
           />
         </label>
 
-        <label className="field">
+        <label className="field note-field">
           <span>Note</span>
-          <input
-            type="text"
+
+          <textarea
+            rows={3}
             value={form.note || ""}
             disabled={!isOnline}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, note: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+
+                note: event.target.value,
+              }))
             }
-            placeholder="Example: Holiday / normal day"
+            placeholder="Eg: Holiday / normal day"
           />
         </label>
 
