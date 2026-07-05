@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { downloadEntriesPdfReport } from "../api/entryApi";
+import {
+  downloadEntriesPdfReport,
+  downloadYearlyEntriesPdfReport,
+} from "../api/entryApi";
 import type {
   DailyEntry,
   MonthlySummary,
@@ -73,17 +76,12 @@ const getYearlyFixedExpenseBreakdown = (row: YearlyRowWithFixedExpense) => {
   };
 };
 
-/**
- * Mobile/tablet date formatter.
- *
- * It handles the common API value "YYYY-MM-DD" without timezone conversion.
- * A Date fallback is included for ISO date-time strings.
- */
 const formatCompactDate = (value: string) => {
   const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
 
   if (dateOnlyMatch) {
     const [, year, month, day] = dateOnlyMatch;
+
     return `${day}/${month}/${year}`;
   }
 
@@ -99,6 +97,33 @@ const formatCompactDate = (value: string) => {
     year: "numeric",
   }).format(parsedDate);
 };
+
+function DownloadIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 3V15M12 15L7 10M12 15L17 10"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M5 19H19"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function PencilActionIcon() {
   return (
@@ -135,18 +160,21 @@ function TrashActionIcon() {
         strokeWidth="2"
         strokeLinecap="round"
       />
+
       <path
         d="M9 3H15L16 7H8L9 3Z"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
       />
+
       <path
         d="M6.5 7L7.25 20H16.75L17.5 7"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
       />
+
       <path
         d="M10 11V16M14 11V16"
         stroke="currentColor"
@@ -192,12 +220,14 @@ function HomeIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+
       <path
         d="M5.5 9.5V20H18.5V9.5"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
       />
+
       <path
         d="M9.5 20V14H14.5V20"
         stroke="currentColor"
@@ -222,6 +252,7 @@ function UserIcon() {
         stroke="currentColor"
         strokeWidth="2"
       />
+
       <path
         d="M4.5 20C5.6 16.9 8.4 15 12 15C15.6 15 18.4 16.9 19.5 20"
         stroke="currentColor"
@@ -266,12 +297,14 @@ function SalesProfitIcon() {
         strokeWidth="2.3"
         strokeLinecap="round"
       />
+
       <path
         d="M12 19V8"
         stroke="currentColor"
         strokeWidth="2.3"
         strokeLinecap="round"
       />
+
       <path
         d="M18 19V5"
         stroke="currentColor"
@@ -300,44 +333,23 @@ function CalculatorIcon() {
         stroke="currentColor"
         strokeWidth="2"
       />
+
       <path
         d="M9 7H15"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
+
       <path
-        d="M9 11H9.01"
+        d="M9 11H9.01M12 11H12.01M15 11H15.01"
         stroke="currentColor"
         strokeWidth="3"
         strokeLinecap="round"
       />
+
       <path
-        d="M12 11H12.01"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M15 11H15.01"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M9 15H9.01"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M12 15H12.01"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M15 15H15.01"
+        d="M9 15H9.01M12 15H12.01M15 15H15.01"
         stroke="currentColor"
         strokeWidth="3"
         strokeLinecap="round"
@@ -362,12 +374,14 @@ function NetLossIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+
       <path
         d="M20 15V10"
         stroke="currentColor"
         strokeWidth="2.3"
         strokeLinecap="round"
       />
+
       <path
         d="M20 15H15"
         stroke="currentColor"
@@ -398,6 +412,9 @@ export default function EntryTable({
   const lastTapTimeRef = useRef(0);
   const doubleTapResetTimerRef = useRef<number | null>(null);
 
+  const isMonthlyView = viewMode === "monthly";
+  const isYearlyView = viewMode === "yearly";
+
   const monthlyTotals = useMemo(() => {
     return entries.reduce(
       (acc, entry) => {
@@ -407,6 +424,7 @@ export default function EntryTable({
         acc.total += entry.total ?? 0;
         acc.expense += entry.expense ?? 0;
         acc.profit += entry.profit ?? 0;
+
         return acc;
       },
       {
@@ -422,6 +440,7 @@ export default function EntryTable({
 
   const monthlyAverages = useMemo(() => {
     const workingEntries = entries.filter((entry) => !entry.isHoliday);
+
     const workingDaysCount = workingEntries.length;
 
     const totals = workingEntries.reduce(
@@ -432,6 +451,7 @@ export default function EntryTable({
         acc.total += entry.total ?? 0;
         acc.expense += entry.expense ?? 0;
         acc.profit += entry.profit ?? 0;
+
         return acc;
       },
       {
@@ -457,8 +477,10 @@ export default function EntryTable({
 
   const fixedExpenseBreakdown = useMemo(() => {
     const shopRent = fixedExpense?.shopRent ?? DEFAULT_FIXED_EXPENSE.shopRent;
+
     const shopkeeperSalary =
       fixedExpense?.shopkeeperSalary ?? DEFAULT_FIXED_EXPENSE.shopkeeperSalary;
+
     const electricityBill =
       fixedExpense?.electricityBill ?? DEFAULT_FIXED_EXPENSE.electricityBill;
 
@@ -476,9 +498,6 @@ export default function EntryTable({
 
   const netProfitAfterFixedExpenses =
     monthlyTotals.profit - fixedExpenseBreakdown.totalFixedExpense;
-
-  const isMonthlyView = viewMode === "monthly";
-  const isYearlyView = viewMode === "yearly";
 
   const filteredYearlyRows = useMemo(() => {
     return yearlyRows.filter((row) => row.hasEntries);
@@ -513,6 +532,7 @@ export default function EntryTable({
     }
 
     const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     const handleEscape = (event: KeyboardEvent) => {
@@ -529,6 +549,14 @@ export default function EntryTable({
     };
   }, [selectedEntry]);
 
+  useEffect(() => {
+    return () => {
+      if (doubleTapResetTimerRef.current !== null) {
+        window.clearTimeout(doubleTapResetTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleEntryRowTap = (entry: DailyEntry) => {
     const isMobileOrTablet = window.matchMedia("(max-width: 980px)").matches;
 
@@ -538,7 +566,9 @@ export default function EntryTable({
 
     const now = Date.now();
     const entryId = String(entry._id);
+
     const isSameEntry = lastTappedEntryIdRef.current === entryId;
+
     const isWithinDoubleTapDelay = now - lastTapTimeRef.current <= 350;
 
     if (isSameEntry && isWithinDoubleTapDelay) {
@@ -549,6 +579,7 @@ export default function EntryTable({
       lastTappedEntryIdRef.current = null;
       lastTapTimeRef.current = 0;
       doubleTapResetTimerRef.current = null;
+
       setSelectedEntry(entry);
       return;
     }
@@ -567,20 +598,13 @@ export default function EntryTable({
     }, 350);
   };
 
-  useEffect(() => {
-    return () => {
-      if (doubleTapResetTimerRef.current !== null) {
-        window.clearTimeout(doubleTapResetTimerRef.current);
-      }
-    };
-  }, []);
-
   const handleModalEdit = () => {
     if (!selectedEntry) {
       return;
     }
 
     const entry = selectedEntry;
+
     setSelectedEntry(null);
     onEdit(entry);
   };
@@ -591,6 +615,7 @@ export default function EntryTable({
     }
 
     const entry = selectedEntry;
+
     setSelectedEntry(null);
     onDelete(entry);
   };
@@ -603,23 +628,38 @@ export default function EntryTable({
       return;
     }
 
-    if (entries.length === 0) {
-      window.alert("No entries found to download.");
+    if (isMonthlyView && entries.length === 0) {
+      window.alert("No entries found for this month.");
+      return;
+    }
+
+    if (isYearlyView && !hasYearlyData) {
+      window.alert("No entries found for this year.");
       return;
     }
 
     setIsDownloading(true);
 
     try {
-      const blob = await downloadEntriesPdfReport(month, year);
+      const blob = isYearlyView
+        ? await downloadYearlyEntriesPdfReport(year)
+        : await downloadEntriesPdfReport(month, year);
+
       const url = window.URL.createObjectURL(blob);
-      const monthName = MONTH_OPTIONS[month - 1] || "monthly";
-      const fileName = `SaleLedger-${monthName}-${year}-report.pdf`;
+
+      const monthName = MONTH_OPTIONS[month - 1] || "Monthly";
+
+      const fileName = isYearlyView
+        ? `SaleLedger_${year}_Annual_Report.pdf`
+        : `SaleLedger-${monthName}-${year}-report.pdf`;
 
       const link = document.createElement("a");
+
       link.href = url;
       link.download = fileName;
+
       document.body.appendChild(link);
+
       link.click();
       link.remove();
 
@@ -628,58 +668,58 @@ export default function EntryTable({
       window.alert(
         error instanceof Error
           ? error.message
-          : "Unable to download PDF report. Please try again.",
+          : isYearlyView
+            ? "Unable to download annual PDF report. Please try again."
+            : "Unable to download monthly PDF report. Please try again.",
       );
     } finally {
       setIsDownloading(false);
     }
   };
 
+  const isDownloadDisabled =
+    !isOnline ||
+    isDownloading ||
+    isLoading ||
+    (isMonthlyView ? entries.length === 0 : !hasYearlyData);
+
   return (
     <section className="card records-card">
       <div className="section-heading records-heading">
         <div>
           <p className="section-kicker">Records</p>
+
           <h2>{isMonthlyView ? "Daily Entries" : "Monthly Summary"}</h2>
         </div>
 
-        {isMonthlyView ? (
-          <button
-            type="button"
-            className="download-report-button"
-            onClick={handleDownloadPdf}
-            disabled={
-              !isOnline || isDownloading || entries.length === 0 || isLoading
-            }
-            title="Download PDF report"
-            aria-label="Download PDF report"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 3V15M12 15L7 10M12 15L17 10"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M5 19H19"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-              />
-            </svg>
+        <button
+          type="button"
+          className="download-report-button"
+          onClick={handleDownloadPdf}
+          disabled={isDownloadDisabled}
+          title={
+            isYearlyView
+              ? `Download ${year} annual PDF report`
+              : `Download ${
+                  MONTH_OPTIONS[month - 1] || "monthly"
+                } ${year} PDF report`
+          }
+          aria-label={
+            isYearlyView
+              ? `Download ${year} annual PDF report`
+              : "Download monthly PDF report"
+          }
+        >
+          <DownloadIcon />
 
-            <span>{isDownloading ? "Downloading..." : "Download Report"}</span>
-          </button>
-        ) : null}
+          <span>
+            {isDownloading
+              ? "Downloading..."
+              : isYearlyView
+                ? "Download Annual Report"
+                : "Download Report"}
+          </span>
+        </button>
       </div>
 
       {isLoading ? (
@@ -698,6 +738,7 @@ export default function EntryTable({
             <div className="average-strip-heading">
               <div>
                 <span>Daily Averages</span>
+
                 <small>
                   Based on {monthlyAverages.workingDaysCount} working days
                 </small>
@@ -711,21 +752,25 @@ export default function EntryTable({
 
             <div className="average-item">
               <span>Avg Cash</span>
+
               <strong>{formatCurrency(monthlyAverages.cash)}</strong>
             </div>
 
             <div className="average-item">
               <span>Avg PhonePe</span>
+
               <strong>{formatCurrency(monthlyAverages.phonePe)}</strong>
             </div>
 
             <div className="average-item">
               <span>Avg Total</span>
+
               <strong>{formatCurrency(monthlyAverages.total)}</strong>
             </div>
 
             <div className="average-item">
               <span>Avg Expense</span>
+
               <strong>{formatCurrency(monthlyAverages.expense)}</strong>
             </div>
 
@@ -737,6 +782,7 @@ export default function EntryTable({
               }
             >
               <span>Avg Profit</span>
+
               <strong>{formatCurrency(monthlyAverages.profit)}</strong>
             </div>
           </section>
@@ -754,8 +800,10 @@ export default function EntryTable({
                 <span className="fixed-expense-icon">
                   <HomeIcon />
                 </span>
+
                 <div>
                   <span>Rent</span>
+
                   <strong>
                     {formatCurrency(fixedExpenseBreakdown.shopRent)}
                   </strong>
@@ -766,8 +814,10 @@ export default function EntryTable({
                 <span className="fixed-expense-icon">
                   <UserIcon />
                 </span>
+
                 <div>
                   <span>Salary</span>
+
                   <strong>
                     {formatCurrency(fixedExpenseBreakdown.shopkeeperSalary)}
                   </strong>
@@ -778,8 +828,10 @@ export default function EntryTable({
                 <span className="fixed-expense-icon">
                   <LightningIcon />
                 </span>
+
                 <div>
                   <span>Electricity</span>
+
                   <strong>
                     {formatCurrency(fixedExpenseBreakdown.electricityBill)}
                   </strong>
@@ -790,6 +842,7 @@ export default function EntryTable({
 
               <article className="fixed-expense-breakdown-total">
                 <span>Total</span>
+
                 <strong>
                   {formatCurrency(fixedExpenseBreakdown.totalFixedExpense)}
                 </strong>
@@ -817,7 +870,9 @@ export default function EntryTable({
                 {entries.map((entry) => (
                   <tr
                     key={entry._id}
-                    className={`${entry.isHoliday ? "holiday-row " : ""}entry-data-row`}
+                    className={`${
+                      entry.isHoliday ? "holiday-row " : ""
+                    }entry-data-row`}
                     onClick={() => handleEntryRowTap(entry)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
@@ -826,7 +881,9 @@ export default function EntryTable({
                       }
                     }}
                     tabIndex={0}
-                    aria-label={`Double tap or double click to view details for ${formatDate(entry.date)}`}
+                    aria-label={`Double tap or double click to view details for ${formatDate(
+                      entry.date,
+                    )}`}
                   >
                     <td data-label="Date">
                       <div className="date-cell">
@@ -857,11 +914,15 @@ export default function EntryTable({
                     </td>
 
                     <td data-label="Sales">{entry.salesCount ?? 0}</td>
+
                     <td data-label="Cash">{formatCurrency(entry.cash)}</td>
+
                     <td data-label="PhonePe">
                       {formatCurrency(entry.phonePe)}
                     </td>
+
                     <td data-label="Total">{formatCurrency(entry.total)}</td>
+
                     <td data-label="Expense">
                       {formatCurrency(entry.expense)}
                     </td>
@@ -889,10 +950,13 @@ export default function EntryTable({
                             event.stopPropagation();
                             onEdit(entry);
                           }}
-                          aria-label={`Edit entry for ${formatDate(entry.date)}`}
+                          aria-label={`Edit entry for ${formatDate(
+                            entry.date,
+                          )}`}
                           title="Edit entry"
                         >
                           <span className="table-action-text">Edit</span>
+
                           <span className="table-action-icon">
                             <PencilActionIcon />
                           </span>
@@ -906,10 +970,13 @@ export default function EntryTable({
                             event.stopPropagation();
                             onDelete(entry);
                           }}
-                          aria-label={`Delete entry for ${formatDate(entry.date)}`}
+                          aria-label={`Delete entry for ${formatDate(
+                            entry.date,
+                          )}`}
                           title="Delete entry"
                         >
                           <span className="table-action-text">Delete</span>
+
                           <span className="table-action-icon">
                             <TrashActionIcon />
                           </span>
@@ -925,21 +992,27 @@ export default function EntryTable({
                   <td data-label="Summary">
                     <strong>Totals</strong>
                   </td>
+
                   <td data-label="Total Sales">
                     <strong>{monthlyTotals.salesCount}</strong>
                   </td>
+
                   <td data-label="Total Cash">
                     <strong>{formatCurrency(monthlyTotals.cash)}</strong>
                   </td>
+
                   <td data-label="Total PhonePe">
                     <strong>{formatCurrency(monthlyTotals.phonePe)}</strong>
                   </td>
+
                   <td data-label="Total Collection">
                     <strong>{formatCurrency(monthlyTotals.total)}</strong>
                   </td>
+
                   <td data-label="Total Expense">
                     <strong>{formatCurrency(monthlyTotals.expense)}</strong>
                   </td>
+
                   <td
                     data-label="Total Sales Profit"
                     className={
@@ -948,9 +1021,11 @@ export default function EntryTable({
                   >
                     <strong>{formatCurrency(monthlyTotals.profit)}</strong>
                   </td>
+
                   <td className="total-empty-cell" data-label="Note">
                     <strong>-</strong>
                   </td>
+
                   <td className="total-empty-cell" data-label="Actions">
                     <strong>-</strong>
                   </td>
@@ -974,9 +1049,12 @@ export default function EntryTable({
                 <span className="business-summary-icon">
                   <SalesProfitIcon />
                 </span>
+
                 <div className="business-summary-content">
                   <span>Sales Profit (All Entries)</span>
+
                   <strong>{formatCurrency(monthlyTotals.profit)}</strong>
+
                   <small>Sum of Sales Profit column above</small>
                 </div>
               </article>
@@ -985,11 +1063,14 @@ export default function EntryTable({
                 <span className="business-summary-icon">
                   <CalculatorIcon />
                 </span>
+
                 <div className="business-summary-content">
                   <span>Fixed Monthly Expense</span>
+
                   <strong>
                     {formatCurrency(fixedExpenseBreakdown.totalFixedExpense)}
                   </strong>
+
                   <small>Rent + Salary + Electricity</small>
                 </div>
               </article>
@@ -1004,9 +1085,12 @@ export default function EntryTable({
                 <span className="business-summary-icon">
                   <NetLossIcon />
                 </span>
+
                 <div className="business-summary-content">
                   <span>Net Profit After Fixed Expenses</span>
+
                   <strong>{formatCurrency(netProfitAfterFixedExpenses)}</strong>
+
                   <small>Sales Profit - Fixed Monthly Expense</small>
                 </div>
               </article>
@@ -1029,6 +1113,7 @@ export default function EntryTable({
                 <header className="entry-details-modal-header">
                   <div>
                     <p className="section-kicker">Daily Entry</p>
+
                     <h2 id="entry-details-title">Entry Details</h2>
                   </div>
 
@@ -1046,12 +1131,14 @@ export default function EntryTable({
                 <div className="entry-details-list">
                   <div className="entry-details-row">
                     <span>Date</span>
+
                     <strong>{formatCompactDate(selectedEntry.date)}</strong>
                   </div>
 
                   {selectedEntry.isHoliday ? (
                     <div className="entry-details-row">
                       <span>Status</span>
+
                       <strong>
                         <span className="tag">Holiday</span>
                       </strong>
@@ -1060,31 +1147,37 @@ export default function EntryTable({
 
                   <div className="entry-details-row">
                     <span>Sales</span>
+
                     <strong>{selectedEntry.salesCount ?? 0}</strong>
                   </div>
 
                   <div className="entry-details-row">
                     <span>Cash</span>
+
                     <strong>{formatCurrency(selectedEntry.cash)}</strong>
                   </div>
 
                   <div className="entry-details-row">
                     <span>PhonePe / UPI</span>
+
                     <strong>{formatCurrency(selectedEntry.phonePe)}</strong>
                   </div>
 
                   <div className="entry-details-row">
                     <span>Total</span>
+
                     <strong>{formatCurrency(selectedEntry.total)}</strong>
                   </div>
 
                   <div className="entry-details-row">
                     <span>Expense</span>
+
                     <strong>{formatCurrency(selectedEntry.expense)}</strong>
                   </div>
 
                   <div className="entry-details-row">
                     <span>Sales Profit</span>
+
                     <strong
                       className={
                         selectedEntry.profit >= 0 ? "profit-text" : "loss-text"
@@ -1096,6 +1189,7 @@ export default function EntryTable({
 
                   <div className="entry-details-row entry-details-note-row">
                     <span>Note</span>
+
                     <strong>{selectedEntry.note || "-"}</strong>
                   </div>
                 </div>
@@ -1136,9 +1230,11 @@ export default function EntryTable({
                 <th>PhonePe</th>
                 <th>Total</th>
                 <th>Expense</th>
+
                 <th className="yearly-fixed-expense-heading">
                   Fixed Monthly Expenses
                 </th>
+
                 <th>Profit</th>
                 <th>Net Profit</th>
               </tr>
