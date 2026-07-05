@@ -30,10 +30,14 @@ const getFixedExpenseTotal = (
   expense?: Partial<FixedMonthlyExpensePayload> | null,
 ) => {
   const shopRent = Number(expense?.shopRent ?? DEFAULT_FIXED_EXPENSE.shopRent);
+
   const shopkeeperSalary = Number(
     expense?.shopkeeperSalary ?? DEFAULT_FIXED_EXPENSE.shopkeeperSalary,
   );
-  const electricityBill = Number(expense?.electricityBill ?? 0);
+
+  const electricityBill = Number(
+    expense?.electricityBill ?? DEFAULT_FIXED_EXPENSE.electricityBill,
+  );
 
   return shopRent + shopkeeperSalary + electricityBill;
 };
@@ -54,6 +58,7 @@ function PencilIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+
       <path
         d="M19.5 7.125L16.875 4.5"
         stroke="currentColor"
@@ -76,8 +81,10 @@ function FixedExpenseModal({
   onSave: (payload: FixedMonthlyExpensePayload) => Promise<void> | void;
 }) {
   const [form, setForm] = useState({
-    shopRent: String(fixedExpense?.shopRent ?? 5000),
-    shopkeeperSalary: String(fixedExpense?.shopkeeperSalary ?? 10000),
+    shopRent: String(fixedExpense?.shopRent ?? DEFAULT_FIXED_EXPENSE.shopRent),
+    shopkeeperSalary: String(
+      fixedExpense?.shopkeeperSalary ?? DEFAULT_FIXED_EXPENSE.shopkeeperSalary,
+    ),
     electricityBill:
       fixedExpense?.electricityBill && fixedExpense.electricityBill > 0
         ? String(fixedExpense.electricityBill)
@@ -85,6 +92,9 @@ function FixedExpenseModal({
   });
 
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -93,19 +103,27 @@ function FixedExpenseModal({
 
     document.addEventListener("keydown", handleEscape);
 
-    return () => document.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [onClose]);
 
   const updateField = (name: keyof typeof form, value: string) => {
-    setForm((prev) => ({
-      ...prev,
+    setForm((previousForm) => ({
+      ...previousForm,
       [name]: value,
     }));
   };
 
   const toAmount = (value: string) => {
     const amount = Number(value);
-    return Number.isFinite(amount) && amount >= 0 ? amount : 0;
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      return 0;
+    }
+
+    return amount;
   };
 
   const totalFixedExpense = useMemo(() => {
@@ -140,7 +158,9 @@ function FixedExpenseModal({
         <div className="fixed-expense-modal-header">
           <div>
             <p className="section-kicker">Fixed Expenses</p>
+
             <h2 id="fixed-expense-modal-title">Fixed Monthly Expenses</h2>
+
             <p>
               Save shop rent, shopkeeper salary, and electricity bill for this
               selected month.
@@ -160,6 +180,7 @@ function FixedExpenseModal({
         <form className="fixed-expense-form" onSubmit={handleSubmit}>
           <label className="field">
             <span>Shop Rent</span>
+
             <input
               type="number"
               min="0"
@@ -172,6 +193,7 @@ function FixedExpenseModal({
 
           <label className="field">
             <span>Shopkeeper Salary</span>
+
             <input
               type="number"
               min="0"
@@ -186,6 +208,7 @@ function FixedExpenseModal({
 
           <label className="field">
             <span>Electricity Bill</span>
+
             <input
               type="number"
               min="0"
@@ -200,6 +223,7 @@ function FixedExpenseModal({
 
           <div className="fixed-expense-total-preview">
             <span>Total Fixed Expenses</span>
+
             <strong>{formatCurrency(totalFixedExpense)}</strong>
           </div>
 
@@ -234,18 +258,35 @@ export default function SummaryCards({
 }: SummaryCardsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  /*
+   * DashboardPage passes totalFixedExpense only in yearly view.
+   */
+  const isYearlyView =
+    typeof totalFixedExpense === "number" &&
+    !fixedExpense &&
+    !canEditFixedExpenses;
+
   const fixedExpenseTotal =
     typeof totalFixedExpense === "number"
       ? totalFixedExpense
       : (fixedExpense?.totalFixedExpense ?? getFixedExpenseTotal(fixedExpense));
 
   const shopRent = fixedExpense?.shopRent ?? DEFAULT_FIXED_EXPENSE.shopRent;
+
   const shopkeeperSalary =
     fixedExpense?.shopkeeperSalary ?? DEFAULT_FIXED_EXPENSE.shopkeeperSalary;
-  const electricityBill = fixedExpense?.electricityBill ?? 0;
 
+  const electricityBill =
+    fixedExpense?.electricityBill ?? DEFAULT_FIXED_EXPENSE.electricityBill;
+
+  /*
+   * Yearly API supplies summary.netProfit.
+   * Monthly view falls back to the normal calculation.
+   */
   const netProfitAfterFixedExpenses =
-    summary.netProfit ?? summary.totalProfit - fixedExpenseTotal;
+    typeof summary.netProfit === "number"
+      ? summary.netProfit
+      : summary.totalProfit - fixedExpenseTotal;
 
   if (isLoading) {
     return (
@@ -254,7 +295,9 @@ export default function SummaryCards({
         aria-busy="true"
         aria-label="Loading summary"
       >
-        {Array.from({ length: SUMMARY_CARD_COUNT }).map((_, index) => (
+        {Array.from({
+          length: SUMMARY_CARD_COUNT,
+        }).map((_, index) => (
           <article className="summary-card summary-skeleton-card" key={index}>
             <span className="skeleton-line skeleton-label" />
             <strong className="skeleton-line skeleton-value" />
@@ -274,27 +317,33 @@ export default function SummaryCards({
 
         <article className="summary-card">
           <span>Cash</span>
+
           <strong>{formatCurrency(summary.totalCash)}</strong>
         </article>
 
         <article className="summary-card">
           <span>PhonePe / UPI</span>
+
           <strong>{formatCurrency(summary.totalPhonePe)}</strong>
         </article>
 
         <article className="summary-card">
           <span>Total Collection</span>
+
           <strong>{formatCurrency(summary.totalCollection)}</strong>
         </article>
 
         <article className="summary-card">
           <span>Expense</span>
+
           <strong>{formatCurrency(summary.totalExpense)}</strong>
         </article>
 
         <article className="summary-card fixed-expense-summary-card">
           <div className="summary-card-header">
-            <span>Fixed Monthly Expenses</span>
+            <span>
+              {isYearlyView ? "Total Fixed Expenses" : "Fixed Monthly Expenses"}
+            </span>
 
             {canEditFixedExpenses && onSaveFixedExpenses ? (
               <button
@@ -311,13 +360,18 @@ export default function SummaryCards({
           <strong>{formatCurrency(fixedExpenseTotal)}</strong>
 
           <small className="summary-card-meta">
-            Rent {formatCurrency(shopRent)} • Salary{" "}
-            {formatCurrency(shopkeeperSalary)} • EB{" "}
-            {formatCurrency(electricityBill)}
+            {isYearlyView ? (
+              "Combined fixed expenses for months containing daily entries"
+            ) : (
+              <>
+                Rent {formatCurrency(shopRent)} • Salary{" "}
+                {formatCurrency(shopkeeperSalary)} • EB{" "}
+                {formatCurrency(electricityBill)}
+              </>
+            )}
           </small>
         </article>
 
-        {/* Profit card kept same as before */}
         <article
           className={
             summary.totalProfit >= 0
@@ -326,10 +380,10 @@ export default function SummaryCards({
           }
         >
           <span>Sales Profit</span>
+
           <strong>{formatCurrency(summary.totalProfit)}</strong>
         </article>
 
-        {/* New separate card */}
         <article
           className={
             netProfitAfterFixedExpenses >= 0
@@ -338,6 +392,7 @@ export default function SummaryCards({
           }
         >
           <span>Net Profit After Fixed Expenses</span>
+
           <strong>{formatCurrency(netProfitAfterFixedExpenses)}</strong>
         </article>
       </section>

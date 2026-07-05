@@ -42,6 +42,25 @@ export type ViewMode = "monthly" | "yearly";
 export type YearlyMonthSummary = MonthlySummary & {
   month: number;
   monthName: string;
+
+  /*
+   * True when the selected month contains at least one daily entry.
+   */
+  hasEntries: boolean;
+  entryCount: number;
+
+  /*
+   * Fixed monthly expense values returned by the yearly API.
+   */
+  shopRent: number;
+  shopkeeperSalary: number;
+  electricityBill: number;
+  totalFixedExpense: number;
+
+  /*
+   * totalProfit - totalFixedExpense
+   */
+  netProfit: number;
 };
 
 export type YearlySummaryResponse = {

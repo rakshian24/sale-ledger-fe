@@ -9,10 +9,12 @@ import type {
 import type { FixedMonthlyExpense } from "../types/fixedMonthlyExpense";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
+type YearlyRowWithFixedExpense = YearlyMonthSummary;
+
 type EntryTableProps = {
   viewMode: ViewMode;
   entries: DailyEntry[];
-  yearlyRows: YearlyMonthSummary[];
+  yearlyRows: YearlyRowWithFixedExpense[];
   summary: MonthlySummary;
   fixedExpense?: FixedMonthlyExpense | null;
   isOnline: boolean;
@@ -50,6 +52,25 @@ const getAverage = (total: number, count: number) => {
   }
 
   return Math.round(total / count);
+};
+
+const getYearlyFixedExpenseBreakdown = (row: YearlyRowWithFixedExpense) => {
+  const shopRent = row.shopRent;
+  const shopkeeperSalary = row.shopkeeperSalary;
+  const electricityBill = row.electricityBill;
+
+  const totalFixedExpense =
+    row.totalFixedExpense ?? shopRent + shopkeeperSalary + electricityBill;
+
+  const netProfit = row.netProfit ?? row.totalProfit - totalFixedExpense;
+
+  return {
+    shopRent,
+    shopkeeperSalary,
+    electricityBill,
+    totalFixedExpense,
+    netProfit,
+  };
 };
 
 /**
@@ -459,13 +480,32 @@ export default function EntryTable({
   const isMonthlyView = viewMode === "monthly";
   const isYearlyView = viewMode === "yearly";
 
-  const hasYearlyData =
-    summary.totalSales > 0 ||
-    summary.totalCash > 0 ||
-    summary.totalPhonePe > 0 ||
-    summary.totalCollection > 0 ||
-    summary.totalExpense > 0 ||
-    summary.totalProfit !== 0;
+  const filteredYearlyRows = useMemo(() => {
+    return yearlyRows.filter((row) => row.hasEntries);
+  }, [yearlyRows]);
+
+  const yearlyRowsWithExpenses = useMemo(() => {
+    return filteredYearlyRows.map((row) => ({
+      ...row,
+      ...getYearlyFixedExpenseBreakdown(row),
+    }));
+  }, [filteredYearlyRows]);
+
+  const yearlyFixedExpenseTotal = useMemo(() => {
+    return yearlyRowsWithExpenses.reduce(
+      (total, row) => total + row.totalFixedExpense,
+      0,
+    );
+  }, [yearlyRowsWithExpenses]);
+
+  const yearlyNetProfitTotal = useMemo(() => {
+    return yearlyRowsWithExpenses.reduce(
+      (total, row) => total + row.netProfit,
+      0,
+    );
+  }, [yearlyRowsWithExpenses]);
+
+  const hasYearlyData = yearlyRowsWithExpenses.length > 0;
 
   useEffect(() => {
     if (!selectedEntry) {
@@ -1096,27 +1136,50 @@ export default function EntryTable({
                 <th>PhonePe</th>
                 <th>Total</th>
                 <th>Expense</th>
+                <th className="yearly-fixed-expense-heading">
+                  Fixed Monthly Expenses
+                </th>
                 <th>Profit</th>
+                <th>Net Profit</th>
               </tr>
             </thead>
 
             <tbody>
-              {yearlyRows.map((row) => (
+              {yearlyRowsWithExpenses.map((row) => (
                 <tr key={row.month}>
                   <td data-label="Month">
                     <strong>{row.monthName}</strong>
                   </td>
+
                   <td data-label="Sales">{row.totalSales}</td>
+
                   <td data-label="Cash">{formatCurrency(row.totalCash)}</td>
+
                   <td data-label="PhonePe">
                     {formatCurrency(row.totalPhonePe)}
                   </td>
+
                   <td data-label="Total">
                     {formatCurrency(row.totalCollection)}
                   </td>
+
                   <td data-label="Expense">
                     {formatCurrency(row.totalExpense)}
                   </td>
+
+                  <td
+                    data-label="Fixed Monthly Expenses"
+                    className="yearly-fixed-expense-cell"
+                  >
+                    <strong>{formatCurrency(row.totalFixedExpense)}</strong>
+
+                    <small>
+                      Rent {formatCurrency(row.shopRent)} • Salary{" "}
+                      {formatCurrency(row.shopkeeperSalary)} • EB{" "}
+                      {formatCurrency(row.electricityBill)}
+                    </small>
+                  </td>
+
                   <td
                     data-label="Profit"
                     className={
@@ -1124,6 +1187,13 @@ export default function EntryTable({
                     }
                   >
                     {formatCurrency(row.totalProfit)}
+                  </td>
+
+                  <td
+                    data-label="Net Profit"
+                    className={row.netProfit >= 0 ? "profit-text" : "loss-text"}
+                  >
+                    <strong>{formatCurrency(row.netProfit)}</strong>
                   </td>
                 </tr>
               ))}
@@ -1134,21 +1204,34 @@ export default function EntryTable({
                 <td data-label="Summary">
                   <strong>Totals</strong>
                 </td>
+
                 <td data-label="Total Sales">
                   <strong>{summary.totalSales}</strong>
                 </td>
+
                 <td data-label="Total Cash">
                   <strong>{formatCurrency(summary.totalCash)}</strong>
                 </td>
+
                 <td data-label="Total PhonePe">
                   <strong>{formatCurrency(summary.totalPhonePe)}</strong>
                 </td>
+
                 <td data-label="Total Collection">
                   <strong>{formatCurrency(summary.totalCollection)}</strong>
                 </td>
+
                 <td data-label="Total Expense">
                   <strong>{formatCurrency(summary.totalExpense)}</strong>
                 </td>
+
+                <td
+                  data-label="Total Fixed Monthly Expenses"
+                  className="yearly-fixed-expense-total-cell"
+                >
+                  <strong>{formatCurrency(yearlyFixedExpenseTotal)}</strong>
+                </td>
+
                 <td
                   data-label="Total Profit"
                   className={
@@ -1156,6 +1239,15 @@ export default function EntryTable({
                   }
                 >
                   <strong>{formatCurrency(summary.totalProfit)}</strong>
+                </td>
+
+                <td
+                  data-label="Total Net Profit"
+                  className={
+                    yearlyNetProfitTotal >= 0 ? "profit-text" : "loss-text"
+                  }
+                >
+                  <strong>{formatCurrency(yearlyNetProfitTotal)}</strong>
                 </td>
               </tr>
             </tfoot>
