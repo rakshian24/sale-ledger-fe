@@ -17,6 +17,7 @@ import Header from "../components/Header";
 import OfflineBanner from "../components/OfflineBanner";
 import SummaryCards from "../components/SummaryCards";
 import CustomSelect from "../components/CustomSelect";
+import PurchaseDashboard from "../components/PurchaseDashboard";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import type { User } from "../types/auth";
@@ -86,6 +87,9 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
   const isOnline = useOnlineStatus();
 
   const [viewMode, setViewMode] = useState<ViewMode>("monthly");
+  const [ledgerSection, setLedgerSection] = useState<"sales" | "purchases">(
+    "sales",
+  );
   const [month, setMonth] = useState(getCurrentMonth());
   const [year, setYear] = useState(getCurrentYear());
 
@@ -273,6 +277,28 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
 
       <OfflineBanner isOnline={isOnline} />
 
+      <nav className="ledger-tabs" aria-label="Ledger section">
+        <button
+          type="button"
+          className={ledgerSection === "sales" ? "active" : ""}
+          onClick={() => setLedgerSection("sales")}
+        >
+          Sales
+        </button>
+        <button
+          type="button"
+          className={ledgerSection === "purchases" ? "active" : ""}
+          onClick={() => setLedgerSection("purchases")}
+        >
+          Purchases
+        </button>
+      </nav>
+
+      {ledgerSection === "purchases" ? (
+        <PurchaseDashboard isOnline={isOnline} />
+      ) : (
+        <>
+
       <section className="card filter-card">
         <div className="filter-card-header">
           <p className="section-kicker">Filter</p>
@@ -351,6 +377,8 @@ export default function DashboardPage({ user, onLogout }: DashboardPageProps) {
           isLoading={isLoading}
         />
       </div>
+        </>
+      )}
     </main>
   );
 }

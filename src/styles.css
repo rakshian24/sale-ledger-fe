@@ -199,6 +199,185 @@ h2 {
   font-weight: 700;
 }
 
+/* Sales / purchases navigation */
+
+.ledger-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 6px;
+  border: 1px solid #dbe2ea;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.ledger-tabs button {
+  min-width: 120px;
+  min-height: 42px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: transparent;
+  color: #475569;
+  font-weight: 900;
+}
+
+.ledger-tabs button.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+/* Purchases */
+
+.purchase-filter-card,
+.purchase-date-filters,
+.compact-setup-form {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.purchase-filter-card {
+  justify-content: space-between;
+}
+
+.purchase-date-filters .field {
+  min-width: 170px;
+}
+
+.purchase-main-grid,
+.purchase-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.purchase-main-grid > .card {
+  height: calc(100% - 18px);
+}
+
+.purchase-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.purchase-form-row .field {
+  min-width: 0;
+}
+
+.purchase-setup-card .compact-setup-form {
+  margin-top: 18px;
+}
+
+.compact-setup-form .field {
+  flex: 1 1 160px;
+}
+
+.compact-setup-form > button {
+  min-height: 46px;
+  flex: 0 0 auto;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.product-setup-form {
+  flex-wrap: wrap;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.purchase-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.purchase-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.purchase-table {
+  min-width: 1120px;
+}
+
+.category-spend-list,
+.price-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.category-spend-list > div,
+.price-history-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.category-spend-list span {
+  display: grid;
+  gap: 3px;
+  font-weight: 900;
+}
+
+.category-spend-list small {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.price-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.price-stats > div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f0fdf4;
+}
+
+.price-stats span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.price-history-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.price-history-list > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.purchase-history-empty {
+  margin-top: 16px;
+}
+
+.summary-card small {
+  color: #64748b;
+  font-weight: 700;
+}
+
 /* Filters */
 
 .filter-card {
@@ -2381,5 +2560,54 @@ h2 {
   .yearly-fixed-expense-cell,
   .yearly-fixed-expense-total-cell {
     min-width: 240px;
+  }
+}
+
+@media (max-width: 900px) {
+  .purchase-main-grid,
+  .purchase-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-filter-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .ledger-tabs {
+    width: 100%;
+  }
+
+  .ledger-tabs button {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .purchase-date-filters,
+  .compact-setup-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .purchase-date-filters .field,
+  .compact-setup-form .field {
+    min-width: 0;
+    flex-basis: auto;
+  }
+
+  .purchase-form-row,
+  .price-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-setup-form > button {
+    width: 100%;
+  }
+
+  .price-history-list > div {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 }
