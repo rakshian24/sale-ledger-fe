@@ -364,6 +364,157 @@ h2 {
   min-width: 1120px;
 }
 
+.purchase-days-card {
+  align-content: start;
+  gap: 12px;
+}
+
+.purchase-days-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.purchase-days-heading strong {
+  font-size: 22px;
+}
+
+.purchase-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(28px, 1fr));
+  gap: 7px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.purchase-day {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.purchase-day.purchased,
+.purchase-days-legend i.purchased {
+  background: #f97316;
+}
+
+.purchase-day.not-purchased,
+.purchase-days-legend i.not-purchased {
+  background: #22c55e;
+}
+
+.purchase-day:hover,
+.purchase-day:focus-visible {
+  outline: none;
+  transform: translateY(-1px) scale(1.08);
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.2);
+}
+
+.purchase-days-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.purchase-days-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.purchase-days-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.purchase-day-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.purchase-day-modal {
+  width: min(100%, 900px);
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.3);
+}
+
+.purchase-day-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.purchase-day-modal-header .section-kicker {
+  margin-bottom: 5px;
+}
+
+.purchase-day-modal-header button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.purchase-day-modal-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 800;
+}
+
+.purchase-day-table-wrapper {
+  max-height: none;
+  margin: 0 24px 24px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.purchase-day-table {
+  min-width: 720px;
+}
+
+.purchase-day-empty {
+  padding: 30px 24px 36px;
+  text-align: center;
+}
+
 .category-spend-list,
 .price-history-list {
   display: grid;
@@ -2742,6 +2893,15 @@ h2 {
   .purchase-form-row {
     grid-template-columns: 1fr;
   }
+
+  .purchase-summary-grid .purchase-days-card {
+    grid-column: 1 / -1;
+  }
+
+  .purchase-days-grid {
+    grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));
+    max-height: none;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2790,5 +2950,54 @@ h2 {
 
   .category-product-row > span:first-child {
     grid-column: 1 / -1;
+  }
+
+  .purchase-day-modal-backdrop {
+    place-items: center;
+    padding: 12px;
+  }
+
+  .purchase-day-modal {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    margin: auto;
+    border-radius: 20px;
+  }
+
+  .purchase-day-modal-header {
+    padding: 18px;
+  }
+
+  .purchase-day-modal-summary {
+    padding: 12px 18px;
+  }
+
+  .purchase-day-table-wrapper {
+    margin: 0 18px 18px;
+  }
+
+  .purchase-days-grid {
+    grid-template-columns: repeat(7, minmax(28px, 1fr));
+  }
+}
+
+/* Purchase summaries: three headline cards, then a full-width day tracker. */
+.purchase-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.purchase-summary-grid .purchase-days-card {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 980px) {
+  .purchase-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .purchase-summary-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -74,6 +74,29 @@ const emptyPurchaseItem = (): PurchaseItemDraft => ({
   unitPrice: 0,
 });
 
+const getDatesInRange = (from: string, to: string) => {
+  const start = new Date(`${from}T00:00:00Z`);
+  const end = new Date(`${to}T00:00:00Z`);
+
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    start > end
+  ) {
+    return [];
+  }
+
+  const dates: string[] = [];
+  const current = new Date(start);
+
+  while (current <= end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+
+  return dates;
+};
+
 export default function PurchaseDashboard({
   isOnline,
 }: PurchaseDashboardProps) {
@@ -90,6 +113,9 @@ export default function PurchaseDashboard({
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
     null,
   );
+  const [selectedPurchaseDate, setSelectedPurchaseDate] = useState<
+    string | null
+  >(null);
   const [history, setHistory] = useState<ProductHistoryResponse | null>(null);
   const [historyProductId, setHistoryProductId] = useState("");
   const [form, setForm] = useState<PurchasePayload>(emptyPurchaseForm);
@@ -163,6 +189,17 @@ export default function PurchaseDashboard({
         ),
       );
   }, [historyProductId, from, to, isOnline, purchases]);
+
+  useEffect(() => {
+    if (!selectedPurchaseDate) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedPurchaseDate(null);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [selectedPurchaseDate]);
 
   const submitCategory = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -374,6 +411,31 @@ export default function PurchaseDashboard({
     return grouped;
   }, [purchases]);
 
+  const purchaseDays = useMemo(() => {
+    const purchasedDates = new Set(purchases.map((item) => item.purchaseDate));
+
+    return getDatesInRange(from, to).map((date) => ({
+      date,
+      dayNumber: Number(date.slice(8, 10)),
+      hasPurchases: purchasedDates.has(date),
+    }));
+  }, [from, to, purchases]);
+
+  const purchasedDayCount = purchaseDays.filter(
+    (day) => day.hasPurchases,
+  ).length;
+
+  const selectedDayPurchases = selectedPurchaseDate
+    ? purchases
+        .filter((purchase) => purchase.purchaseDate === selectedPurchaseDate)
+        .sort((first, second) => second.totalAmount - first.totalAmount)
+    : [];
+
+  const selectedDayTotal = selectedDayPurchases.reduce(
+    (total, purchase) => total + purchase.totalAmount,
+    0,
+  );
+
   return (
     <div className="purchase-dashboard">
       <section className="card purchase-filter-card">
@@ -421,9 +483,43 @@ export default function PurchaseDashboard({
               : "No purchases"}
           </small>
         </article>
-        <article className="summary-card">
-          <span>Products available</span>
-          <strong>{products.length}</strong>
+        <article className="summary-card purchase-days-card">
+          <div className="purchase-days-heading">
+            <span>Days purchased</span>
+            <strong>
+              {purchasedDayCount}/{purchaseDays.length}
+            </strong>
+          </div>
+          <div className="purchase-days-grid">
+            {purchaseDays.map((day) => (
+              <button
+                type="button"
+                key={day.date}
+                className={
+                  day.hasPurchases
+                    ? "purchase-day purchased"
+                    : "purchase-day not-purchased"
+                }
+                title={`${formatDateDDMMMYYYY(day.date)}: ${
+                  day.hasPurchases ? "purchased" : "no purchases"
+                }`}
+                aria-label={`View ${
+                  day.hasPurchases ? "purchases" : "no purchases"
+                } for ${formatDateDDMMMYYYY(day.date)}`}
+                onClick={() => setSelectedPurchaseDate(day.date)}
+              >
+                {day.dayNumber}
+              </button>
+            ))}
+          </div>
+          <div className="purchase-days-legend">
+            <span>
+              <i className="purchased" /> Purchased
+            </span>
+            <span>
+              <i className="not-purchased" /> Not purchased
+            </span>
+          </div>
         </article>
       </section>
 
@@ -942,7 +1038,7 @@ export default function PurchaseDashboard({
               <div className="price-history-list">
                 {history.priceHistory.map((row) => (
                   <div key={row._id}>
-                    <span>{row.purchaseDate}</span>
+                    <span>{formatDateDDMMMYYYY(row.purchaseDate)}</span>
                     <span>
                       {row.quantity} {row.unit}
                     </span>
@@ -960,6 +1056,94 @@ export default function PurchaseDashboard({
           )}
         </section>
       </div>
+
+      {selectedPurchaseDate ? (
+        <div
+          className="purchase-day-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedPurchaseDate(null);
+            }
+          }}
+        >
+          <section
+            className="purchase-day-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="purchase-day-modal-title"
+          >
+            <header className="purchase-day-modal-header">
+              <div>
+                <p className="section-kicker">Daily purchases</p>
+                <h2 id="purchase-day-modal-title">
+                  {formatDateDDMMMYYYY(selectedPurchaseDate)}
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Close daily purchases"
+                onClick={() => setSelectedPurchaseDate(null)}
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="purchase-day-modal-summary">
+              <span>
+                <strong>{selectedDayPurchases.length}</strong> items
+              </span>
+              <span>
+                Total <strong>{formatCurrency(selectedDayTotal)}</strong>
+              </span>
+            </div>
+
+            {selectedDayPurchases.length === 0 ? (
+              <p className="empty-state purchase-day-empty">
+                No items were purchased on this date.
+              </p>
+            ) : (
+              <div className="table-wrapper purchase-day-table-wrapper">
+                <table className="entries-table purchase-day-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Quantity</th>
+                      <th>Unit price</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedDayPurchases.map((purchase) => (
+                      <tr key={purchase._id}>
+                        <td>{purchase.productName}</td>
+                        <td>{purchase.categoryName}</td>
+                        <td>
+                          {purchase.quantity} {purchase.unit}
+                        </td>
+                        <td>{formatCurrency(purchase.unitPrice)}</td>
+                        <td>
+                          <strong>
+                            {formatCurrency(purchase.totalAmount)}
+                          </strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="total-row">
+                      <td>Total</td>
+                      <td colSpan={3}>{selectedDayPurchases.length} items</td>
+                      <td>{formatCurrency(selectedDayTotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
