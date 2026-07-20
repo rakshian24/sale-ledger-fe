@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   createPurchase,
   createPurchaseCategory,
@@ -82,6 +89,25 @@ function TrashActionIcon() {
         d="M10 11V16M14 11V16"
         stroke="currentColor"
         strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 6L18 18M18 6L6 18"
+        stroke="currentColor"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
     </svg>
@@ -195,9 +221,17 @@ export default function PurchaseDashboard({
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
     null,
   );
+  const [expandedPurchaseDates, setExpandedPurchaseDates] = useState<
+    Set<string>
+  >(new Set());
   const [selectedPurchaseDate, setSelectedPurchaseDate] = useState<
     string | null
   >(null);
+  const [selectedPurchaseEntry, setSelectedPurchaseEntry] =
+    useState<Purchase | null>(null);
+  const lastTappedPurchaseIdRef = useRef<string | null>(null);
+  const lastPurchaseTapTimeRef = useRef(0);
+  const purchaseDoubleTapTimerRef = useRef<number | null>(null);
   const [history, setHistory] = useState<ProductHistoryResponse | null>(null);
   const [historyProductId, setHistoryProductId] = useState("");
   const [form, setForm] = useState<PurchasePayload>(emptyPurchaseForm);
@@ -283,6 +317,31 @@ export default function PurchaseDashboard({
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [selectedPurchaseDate]);
+
+  useEffect(() => {
+    if (!selectedPurchaseEntry) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedPurchaseEntry(null);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [selectedPurchaseEntry]);
+
+  useEffect(() => {
+    return () => {
+      if (purchaseDoubleTapTimerRef.current !== null) {
+        window.clearTimeout(purchaseDoubleTapTimerRef.current);
+      }
+    };
+  }, []);
 
   const submitCategory = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -402,6 +461,51 @@ export default function PurchaseDashboard({
         err instanceof Error ? err.message : "Unable to delete purchase",
       );
     }
+  };
+
+  const handlePurchaseRowTap = (purchase: Purchase) => {
+    if (!window.matchMedia("(max-width: 980px)").matches) return;
+
+    const now = Date.now();
+    const purchaseId = String(purchase._id);
+    const isSamePurchase = lastTappedPurchaseIdRef.current === purchaseId;
+    const isWithinDoubleTapDelay = now - lastPurchaseTapTimeRef.current <= 350;
+
+    if (isSamePurchase && isWithinDoubleTapDelay) {
+      if (purchaseDoubleTapTimerRef.current !== null) {
+        window.clearTimeout(purchaseDoubleTapTimerRef.current);
+      }
+      lastTappedPurchaseIdRef.current = null;
+      lastPurchaseTapTimeRef.current = 0;
+      purchaseDoubleTapTimerRef.current = null;
+      setSelectedPurchaseEntry(purchase);
+      return;
+    }
+
+    lastTappedPurchaseIdRef.current = purchaseId;
+    lastPurchaseTapTimeRef.current = now;
+    if (purchaseDoubleTapTimerRef.current !== null) {
+      window.clearTimeout(purchaseDoubleTapTimerRef.current);
+    }
+    purchaseDoubleTapTimerRef.current = window.setTimeout(() => {
+      lastTappedPurchaseIdRef.current = null;
+      lastPurchaseTapTimeRef.current = 0;
+      purchaseDoubleTapTimerRef.current = null;
+    }, 350);
+  };
+
+  const editSelectedPurchase = () => {
+    if (!selectedPurchaseEntry) return;
+    const purchase = selectedPurchaseEntry;
+    setSelectedPurchaseEntry(null);
+    startEditing(purchase);
+  };
+
+  const deleteSelectedPurchase = () => {
+    if (!selectedPurchaseEntry) return;
+    const purchase = selectedPurchaseEntry;
+    setSelectedPurchaseEntry(null);
+    removePurchase(purchase);
   };
 
   const downloadReport = async () => {
@@ -542,6 +646,39 @@ export default function PurchaseDashboard({
     (total, purchase) => total + purchase.totalAmount,
     0,
   );
+
+  const purchasesByDate = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { date: string; purchases: Purchase[]; totalAmount: number }
+    >();
+
+    purchases.forEach((purchase) => {
+      const group = grouped.get(purchase.purchaseDate) ?? {
+        date: purchase.purchaseDate,
+        purchases: [],
+        totalAmount: 0,
+      };
+      group.purchases.push(purchase);
+      group.totalAmount += purchase.totalAmount;
+      grouped.set(purchase.purchaseDate, group);
+    });
+
+    return [...grouped.values()];
+  }, [purchases]);
+
+  const hasExpandedPurchaseRows = purchasesByDate.some((group) =>
+    expandedPurchaseDates.has(group.date),
+  );
+
+  const togglePurchaseDate = (date: string) => {
+    setExpandedPurchaseDates((current) => {
+      const next = new Set(current);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  };
 
   return (
     <div className="purchase-dashboard">
@@ -996,72 +1133,172 @@ export default function PurchaseDashboard({
           <p className="empty-state">No purchases in this period.</p>
         ) : (
           <div className="table-wrapper">
-            <table className="entries-table purchase-table">
+            <table
+              className={`entries-table purchase-table${
+                hasExpandedPurchaseRows ? "" : " purchase-table-collapsed"
+              }`}
+            >
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Product</th>
-                  <th>Category</th>
-                  <th>Quantity</th>
-                  <th>Unit price</th>
+                  <th>{hasExpandedPurchaseRows ? "Product" : "Entries"}</th>
+                  {hasExpandedPurchaseRows ? (
+                    <>
+                      <th>Category</th>
+                      <th>Quantity</th>
+                      <th>Unit price</th>
+                    </>
+                  ) : null}
                   <th>Total</th>
-                  <th>Supplier</th>
+                  {hasExpandedPurchaseRows ? <th>Supplier</th> : null}
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {purchases.map((purchase) => (
-                  <tr key={purchase._id}>
-                    <td>{formatDateDDMMMYYYY(purchase.purchaseDate)}</td>
-                    <td>{purchase.productName}</td>
-                    <td>{purchase.categoryName}</td>
-                    <td>
-                      {purchase.quantity} {purchase.unit}
-                    </td>
-                    <td>{formatCurrency(purchase.unitPrice)}</td>
-                    <td>
-                      <strong>{formatCurrency(purchase.totalAmount)}</strong>
-                    </td>
-                    <td>{purchase.supplier || "—"}</td>
-                    <td>
-                      <div className="table-actions">
-                        <button
-                          type="button"
-                          className="table-action-button edit-action-button"
-                          disabled={!isOnline}
-                          aria-label={`Edit ${purchase.productName} purchase for ${formatDateDDMMMYYYY(purchase.purchaseDate)}`}
-                          title="Edit purchase"
-                          onClick={() => startEditing(purchase)}
-                        >
-                          <span className="table-action-text">Edit</span>
-                          <span className="table-action-icon">
-                            <PencilActionIcon />
+                {purchasesByDate.map((dateGroup) => {
+                  const isExpanded = expandedPurchaseDates.has(dateGroup.date);
+
+                  return (
+                    <Fragment key={dateGroup.date}>
+                      <tr
+                        className="purchase-date-summary-row"
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        onClick={() => togglePurchaseDate(dateGroup.date)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            togglePurchaseDate(dateGroup.date);
+                          }
+                        }}
+                      >
+                        <td>
+                          <strong>{formatDateDDMMMYYYY(dateGroup.date)}</strong>
+                        </td>
+                        <td>
+                          <strong>{dateGroup.purchases.length} entries</strong>
+                        </td>
+                        {hasExpandedPurchaseRows ? (
+                          <>
+                            <td />
+                            <td />
+                            <td />
+                          </>
+                        ) : null}
+                        <td>
+                          <strong>
+                            {formatCurrency(dateGroup.totalAmount)}
+                          </strong>
+                        </td>
+                        {hasExpandedPurchaseRows ? <td /> : null}
+                        <td>
+                          <span
+                            className="purchase-date-expand-icon"
+                            aria-hidden="true"
+                          >
+                            {isExpanded ? "−" : "+"}
                           </span>
-                        </button>
-                        <button
-                          type="button"
-                          className="table-action-button delete-action-button danger-button"
-                          disabled={!isOnline}
-                          aria-label={`Delete ${purchase.productName} purchase for ${formatDateDDMMMYYYY(purchase.purchaseDate)}`}
-                          title="Delete purchase"
-                          onClick={() => removePurchase(purchase)}
-                        >
-                          <span className="table-action-text">Delete</span>
-                          <span className="table-action-icon">
-                            <TrashActionIcon />
-                          </span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                      </tr>
+
+                      {isExpanded
+                        ? dateGroup.purchases.map((purchase) => (
+                            <tr
+                              className="purchase-date-detail-row purchase-entry-data-row"
+                              key={purchase._id}
+                              tabIndex={0}
+                              aria-label={`Double tap or double click to view details for ${purchase.productName}`}
+                              onClick={() => handlePurchaseRowTap(purchase)}
+                              onKeyDown={(event) => {
+                                if (
+                                  event.key === "Enter" &&
+                                  window.matchMedia("(max-width: 980px)")
+                                    .matches
+                                ) {
+                                  event.preventDefault();
+                                  setSelectedPurchaseEntry(purchase);
+                                }
+                              }}
+                            >
+                              <td>
+                                <span className="purchase-detail-marker">
+                                  ↳
+                                </span>
+                              </td>
+                              <td>{purchase.productName}</td>
+                              {hasExpandedPurchaseRows ? (
+                                <>
+                                  <td>{purchase.categoryName}</td>
+                                  <td>
+                                    {purchase.quantity} {purchase.unit}
+                                  </td>
+                                  <td>{formatCurrency(purchase.unitPrice)}</td>
+                                </>
+                              ) : null}
+                              <td>
+                                <strong>
+                                  {formatCurrency(purchase.totalAmount)}
+                                </strong>
+                              </td>
+                              {hasExpandedPurchaseRows ? (
+                                <td>{purchase.supplier || "—"}</td>
+                              ) : null}
+                              <td>
+                                <div className="table-actions">
+                                  <button
+                                    type="button"
+                                    className="table-action-button edit-action-button"
+                                    disabled={!isOnline}
+                                    aria-label={`Edit ${purchase.productName} purchase for ${formatDateDDMMMYYYY(purchase.purchaseDate)}`}
+                                    title="Edit purchase"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      startEditing(purchase);
+                                    }}
+                                  >
+                                    <span className="table-action-text">
+                                      Edit
+                                    </span>
+                                    <span className="table-action-icon">
+                                      <PencilActionIcon />
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="table-action-button delete-action-button danger-button"
+                                    disabled={!isOnline}
+                                    aria-label={`Delete ${purchase.productName} purchase for ${formatDateDDMMMYYYY(purchase.purchaseDate)}`}
+                                    title="Delete purchase"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      removePurchase(purchase);
+                                    }}
+                                  >
+                                    <span className="table-action-text">
+                                      Delete
+                                    </span>
+                                    <span className="table-action-icon">
+                                      <TrashActionIcon />
+                                    </span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        : null}
+                    </Fragment>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr className="total-row">
                   <td>Total</td>
-                  <td colSpan={4}>{purchases.length} entries</td>
+                  <td colSpan={hasExpandedPurchaseRows ? 4 : 1}>
+                    {purchases.length} entries
+                  </td>
                   <td>{formatCurrency(summary.totalSpent)}</td>
-                  <td colSpan={2} />
+                  <td colSpan={hasExpandedPurchaseRows ? 2 : 1} />
                 </tr>
               </tfoot>
             </table>
@@ -1223,6 +1460,98 @@ export default function PurchaseDashboard({
           )}
         </section>
       </div>
+
+      {selectedPurchaseEntry ? (
+        <div
+          className="entry-details-backdrop"
+          role="presentation"
+          onMouseDown={() => setSelectedPurchaseEntry(null)}
+        >
+          <section
+            className="entry-details-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="purchase-entry-details-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="entry-details-modal-header">
+              <div>
+                <p className="section-kicker">Purchase entry</p>
+                <h2 id="purchase-entry-details-title">Purchase Details</h2>
+              </div>
+              <button
+                type="button"
+                className="entry-details-close-button"
+                onClick={() => setSelectedPurchaseEntry(null)}
+                aria-label="Close purchase details"
+                title="Close"
+              >
+                <CloseIcon />
+              </button>
+            </header>
+
+            <div className="entry-details-list">
+              <div className="entry-details-row">
+                <span>Date</span>
+                <strong>
+                  {formatDateDDMMMYYYY(selectedPurchaseEntry.purchaseDate)}
+                </strong>
+              </div>
+              <div className="entry-details-row">
+                <span>Product</span>
+                <strong>{selectedPurchaseEntry.productName}</strong>
+              </div>
+              <div className="entry-details-row">
+                <span>Category</span>
+                <strong>{selectedPurchaseEntry.categoryName}</strong>
+              </div>
+              <div className="entry-details-row">
+                <span>Quantity</span>
+                <strong>
+                  {selectedPurchaseEntry.quantity} {selectedPurchaseEntry.unit}
+                </strong>
+              </div>
+              <div className="entry-details-row">
+                <span>Unit price</span>
+                <strong>
+                  {formatCurrency(selectedPurchaseEntry.unitPrice)}
+                </strong>
+              </div>
+              <div className="entry-details-row">
+                <span>Total</span>
+                <strong>
+                  {formatCurrency(selectedPurchaseEntry.totalAmount)}
+                </strong>
+              </div>
+              <div className="entry-details-row">
+                <span>Supplier</span>
+                <strong>{selectedPurchaseEntry.supplier || "-"}</strong>
+              </div>
+            </div>
+
+            <footer className="entry-details-actions">
+              <button
+                type="button"
+                className="entry-details-edit-button"
+                disabled={!isOnline}
+                onClick={editSelectedPurchase}
+              >
+                <PencilActionIcon />
+                <span>Edit</span>
+              </button>
+              <button
+                type="button"
+                className="entry-details-delete-button"
+                disabled={!isOnline}
+                onClick={deleteSelectedPurchase}
+              >
+                <TrashActionIcon />
+                <span>Delete</span>
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
 
       {selectedPurchaseDate ? (
         <div
