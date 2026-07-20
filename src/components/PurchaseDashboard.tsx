@@ -33,7 +33,13 @@ type PurchaseDashboardProps = {
 
 function PencilActionIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M16.862 4.487L19.55 7.175M5.25 18.75L8.45 17.95C8.87 17.845 9.255 17.63 9.562 17.323L20.237 6.648C20.94 5.945 20.94 4.805 20.237 4.102L19.898 3.763C19.195 3.06 18.055 3.06 17.352 3.763L6.677 14.438C6.37 14.745 6.155 15.13 6.05 15.55L5.25 18.75Z"
         stroke="currentColor"
@@ -47,11 +53,37 @@ function PencilActionIcon() {
 
 function TrashActionIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M9 3H15L16 7H8L9 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M6.5 7L7.25 20H16.75L17.5 7" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M10 11V16M14 11V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M4 7H20"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 3H15L16 7H8L9 3Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.5 7L7.25 20H16.75L17.5 7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 11V16M14 11V16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -122,6 +154,30 @@ const getDatesInRange = (from: string, to: string) => {
 
   return dates;
 };
+
+const getDairyLitres = (
+  categoryName: string,
+  productName: string,
+  quantity: number,
+  unit: string,
+) => {
+  if (
+    categoryName.trim().toLocaleLowerCase("en-IN") !== "dairy" ||
+    unit.trim().toLocaleLowerCase("en-IN") !== "packets"
+  ) {
+    return null;
+  }
+
+  const volumeMatch = productName.match(/\b(250|500)\s*ml\b/i);
+  if (!volumeMatch) return null;
+
+  return quantity * (Number(volumeMatch[1]) / 1000);
+};
+
+const formatLitres = (value: number) =>
+  `${new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 3,
+  }).format(value)} L`;
 
 export default function PurchaseDashboard({
   isOnline,
@@ -1063,21 +1119,35 @@ export default function PurchaseDashboard({
                           <span>Quantity</span>
                           <span>Total</span>
                         </div>
-                        {productTotals.map((item) => (
-                          <div
-                            className="category-product-row"
-                            key={`${item.productId}-${item.unit}`}
-                          >
-                            <span>
-                              <strong>{item.productName}</strong>
-                              <small>{item.purchaseCount} entries</small>
-                            </span>
-                            <span>
-                              {item.totalQuantity} {item.unit}
-                            </span>
-                            <strong>{formatCurrency(item.totalSpent)}</strong>
-                          </div>
-                        ))}
+                        {productTotals.map((item) => {
+                          const dairyLitres = getDairyLitres(
+                            category.categoryName,
+                            item.productName,
+                            item.totalQuantity,
+                            item.unit,
+                          );
+
+                          return (
+                            <div
+                              className="category-product-row"
+                              key={`${item.productId}-${item.unit}`}
+                            >
+                              <span>
+                                <strong>{item.productName}</strong>
+                                <small>{item.purchaseCount} entries</small>
+                              </span>
+                              <span className="category-product-quantity">
+                                <strong>
+                                  {item.totalQuantity} {item.unit}
+                                </strong>
+                                {dairyLitres !== null ? (
+                                  <small>{formatLitres(dairyLitres)}</small>
+                                ) : null}
+                              </span>
+                              <strong>{formatCurrency(item.totalSpent)}</strong>
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : null}
                   </div>
