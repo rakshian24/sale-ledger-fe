@@ -266,6 +266,60 @@ h2 {
   min-width: 0;
 }
 
+.purchase-items-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.purchase-item-row {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dbe2ea;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.purchase-item-heading,
+.purchase-item-subtotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.purchase-item-heading > strong {
+  font-size: 15px;
+}
+
+.remove-purchase-item {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.purchase-item-subtotal {
+  padding-top: 10px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.purchase-item-subtotal span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.add-purchase-item {
+  min-height: 42px;
+  justify-self: start;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
 .purchase-setup-card .compact-setup-form {
   margin-top: 18px;
 }
@@ -2563,7 +2617,7 @@ h2 {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .purchase-main-grid,
   .purchase-report-grid {
     grid-template-columns: 1fr;
@@ -2572,6 +2626,21 @@ h2 {
   .purchase-filter-card {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .purchase-main-grid .entry-form {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-main-grid .entry-form > *,
+  .purchase-items-editor,
+  .purchase-item-row,
+  .purchase-form-row {
+    grid-column: 1 / -1;
+  }
+
+  .purchase-form-row {
+    grid-template-columns: 1fr;
   }
 }
 

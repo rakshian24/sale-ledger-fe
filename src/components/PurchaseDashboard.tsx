@@ -58,6 +58,18 @@ const emptyPurchaseForm = (): PurchasePayload => ({
   note: "",
 });
 
+type PurchaseItemDraft = Pick<
+  PurchasePayload,
+  "productId" | "quantity" | "unit" | "unitPrice"
+>;
+
+const emptyPurchaseItem = (): PurchaseItemDraft => ({
+  productId: "",
+  quantity: 0,
+  unit: "kg",
+  unitPrice: 0,
+});
+
 export default function PurchaseDashboard({
   isOnline,
 }: PurchaseDashboardProps) {
@@ -72,6 +84,12 @@ export default function PurchaseDashboard({
   const [history, setHistory] = useState<ProductHistoryResponse | null>(null);
   const [historyProductId, setHistoryProductId] = useState("");
   const [form, setForm] = useState<PurchasePayload>(emptyPurchaseForm);
+  const [batchDate, setBatchDate] = useState(getTodayDateInputValue());
+  const [batchSupplier, setBatchSupplier] = useState("");
+  const [batchNote, setBatchNote] = useState("");
+  const [batchItems, setBatchItems] = useState<PurchaseItemDraft[]>([
+    emptyPurchaseItem(),
+  ]);
   const [editing, setEditing] = useState<Purchase | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [productForm, setProductForm] = useState({
@@ -169,14 +187,55 @@ export default function PurchaseDashboard({
 
   const submitPurchase = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form.productId || form.quantity <= 0) return;
+
+    const validBatchItems = batchItems.filter(
+      (item) => item.productId && item.quantity > 0,
+    );
+
+    if (
+      editing
+        ? !form.productId || form.quantity <= 0
+        : validBatchItems.length !== batchItems.length
+    ) {
+      setError("Complete the product and quantity for every purchase item");
+      return;
+    }
+
     setIsSaving(true);
     setError("");
     try {
-      if (editing) await updatePurchase(editing._id, form);
-      else await createPurchase(form);
+      if (editing) {
+        await updatePurchase(editing._id, form);
+      } else {
+        const results = await Promise.allSettled(
+          validBatchItems.map((item) =>
+            createPurchase({
+              purchaseDate: batchDate,
+              supplier: batchSupplier,
+              note: batchNote,
+              ...item,
+            }),
+          ),
+        );
+
+        const failedItems = validBatchItems.filter(
+          (_, index) => results[index].status === "rejected",
+        );
+
+        if (failedItems.length > 0) {
+          setBatchItems(failedItems);
+          await loadPurchases();
+          throw new Error(
+            `${validBatchItems.length - failedItems.length} purchase(s) saved; ${failedItems.length} failed. Only the unsaved items remain in the form.`,
+          );
+        }
+      }
+
       setEditing(null);
       setForm(emptyPurchaseForm());
+      setBatchItems([emptyPurchaseItem()]);
+      setBatchSupplier("");
+      setBatchNote("");
       await loadPurchases();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save purchase");
@@ -219,6 +278,38 @@ export default function PurchaseDashboard({
     }));
   };
 
+  const updateBatchItem = (
+    index: number,
+    changes: Partial<PurchaseItemDraft>,
+  ) => {
+    setBatchItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...changes } : item,
+      ),
+    );
+  };
+
+  const selectBatchProduct = (index: number, productId: string) => {
+    const product = products.find((item) => item._id === productId);
+    updateBatchItem(index, {
+      productId,
+      unit: product?.defaultUnit || batchItems[index].unit,
+    });
+  };
+
+  const addBatchItem = () => {
+    setBatchItems((current) => [...current, emptyPurchaseItem()]);
+  };
+
+  const removeBatchItem = (index: number) => {
+    setBatchItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const batchTotal = batchItems.reduce(
+    (total, item) => total + item.quantity * item.unitPrice,
+    0,
+  );
+
   return (
     <div className="purchase-dashboard">
       <section className="card purchase-filter-card">
@@ -246,17 +337,70 @@ export default function PurchaseDashboard({
           <div className="section-heading"><div><p className="section-kicker">{editing ? "Edit" : "Add"}</p><h2>{editing ? "Edit Purchase" : "New Purchase"}</h2></div></div>
           {products.length === 0 ? <p className="empty-state">Create a category and product first.</p> : null}
           <form className="entry-form" onSubmit={submitPurchase}>
-            <label className="field"><span>Date</span><input required type="date" value={form.purchaseDate} onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })} /></label>
-            <label className="field"><span>Product</span><select required value={form.productId} onChange={(e) => selectProduct(e.target.value)}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
-            <div className="purchase-form-row">
-              <label className="field"><span>Quantity</span><input required min="0.001" step="any" type="number" value={form.quantity || ""} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} /></label>
-              <label className="field"><span>Unit</span><input required value={form.unit} placeholder="kg, piece, litre" onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
-            </div>
-            <label className="field"><span>Price per unit</span><input required min="0" step="0.01" type="number" value={form.unitPrice || ""} onChange={(e) => setForm({ ...form, unitPrice: Number(e.target.value) })} /></label>
-            <label className="field"><span>Supplier (optional)</span><input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} /></label>
-            <label className="field"><span>Note (optional)</span><textarea rows={2} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
-            <div className="calculated-preview"><div><span>Purchase total</span><strong>{formatCurrency(form.quantity * form.unitPrice)}</strong></div></div>
-            <div className="actions"><button disabled={!isOnline || isSaving || products.length === 0} type="submit">{editing ? "Update Purchase" : "Save Purchase"}</button>{editing ? <button className="secondary-button" type="button" onClick={() => { setEditing(null); setForm(emptyPurchaseForm()); }}>Cancel</button> : null}</div>
+            <label className="field">
+              <span>Date</span>
+              <input
+                required
+                type="date"
+                value={editing ? form.purchaseDate : batchDate}
+                onChange={(event) =>
+                  editing
+                    ? setForm({ ...form, purchaseDate: event.target.value })
+                    : setBatchDate(event.target.value)
+                }
+              />
+            </label>
+
+            {editing ? (
+              <>
+                <label className="field"><span>Product</span><select required value={form.productId} onChange={(e) => selectProduct(e.target.value)}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
+                <div className="purchase-form-row">
+                  <label className="field"><span>Quantity</span><input required min="0.001" step="any" type="number" value={form.quantity || ""} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} /></label>
+                  <label className="field"><span>Unit</span><input required value={form.unit} placeholder="kg, piece, litre" onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
+                </div>
+                <label className="field"><span>Price per unit</span><input required min="0" step="0.01" type="number" value={form.unitPrice || ""} onChange={(e) => setForm({ ...form, unitPrice: Number(e.target.value) })} /></label>
+              </>
+            ) : (
+              <div className="purchase-items-editor">
+                {batchItems.map((item, index) => (
+                  <div className="purchase-item-row" key={index}>
+                    <div className="purchase-item-heading">
+                      <strong>Item {index + 1}</strong>
+                      {batchItems.length > 1 ? (
+                        <button
+                          type="button"
+                          className="remove-purchase-item"
+                          aria-label={`Remove item ${index + 1}`}
+                          onClick={() => removeBatchItem(index)}
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
+                    <label className="field"><span>Product</span><select required value={item.productId} onChange={(e) => selectBatchProduct(index, e.target.value)}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
+                    <div className="purchase-form-row">
+                      <label className="field"><span>Quantity</span><input required min="0.001" step="any" type="number" value={item.quantity || ""} onChange={(e) => updateBatchItem(index, { quantity: Number(e.target.value) })} /></label>
+                      <label className="field"><span>Unit</span><input required value={item.unit} placeholder="kg, piece, litre" onChange={(e) => updateBatchItem(index, { unit: e.target.value })} /></label>
+                    </div>
+                    <label className="field"><span>Price per unit</span><input required min="0" step="0.01" type="number" value={item.unitPrice || ""} onChange={(e) => updateBatchItem(index, { unitPrice: Number(e.target.value) })} /></label>
+                    <div className="purchase-item-subtotal"><span>Item total</span><strong>{formatCurrency(item.quantity * item.unitPrice)}</strong></div>
+                  </div>
+                ))}
+                <button
+                  className="add-purchase-item secondary-button"
+                  type="button"
+                  disabled={!isOnline || isSaving || products.length === 0}
+                  onClick={addBatchItem}
+                >
+                  + Add another item
+                </button>
+              </div>
+            )}
+
+            <label className="field"><span>Supplier (optional)</span><input value={editing ? form.supplier : batchSupplier} onChange={(e) => editing ? setForm({ ...form, supplier: e.target.value }) : setBatchSupplier(e.target.value)} /></label>
+            <label className="field"><span>Note (optional)</span><textarea rows={2} value={editing ? form.note : batchNote} onChange={(e) => editing ? setForm({ ...form, note: e.target.value }) : setBatchNote(e.target.value)} /></label>
+            <div className="calculated-preview"><div><span>{editing ? "Purchase total" : "All items total"}</span><strong>{formatCurrency(editing ? form.quantity * form.unitPrice : batchTotal)}</strong></div></div>
+            <div className="actions"><button disabled={!isOnline || isSaving || products.length === 0} type="submit">{editing ? "Update Purchase" : `Save ${batchItems.length} Purchase${batchItems.length === 1 ? "" : "s"}`}</button>{editing ? <button className="secondary-button" type="button" onClick={() => { setEditing(null); setForm(emptyPurchaseForm()); }}>Cancel</button> : null}</div>
           </form>
         </section>
 
