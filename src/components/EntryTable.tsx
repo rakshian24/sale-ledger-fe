@@ -407,10 +407,15 @@ export default function EntryTable({
 }: EntryTableProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<DailyEntry | null>(null);
+  const [selectedYearlyRow, setSelectedYearlyRow] =
+    useState<YearlyRowWithFixedExpense | null>(null);
 
   const lastTappedEntryIdRef = useRef<string | null>(null);
   const lastTapTimeRef = useRef(0);
   const doubleTapResetTimerRef = useRef<number | null>(null);
+  const lastTappedYearlyMonthRef = useRef<number | null>(null);
+  const lastYearlyTapTimeRef = useRef(0);
+  const yearlyDoubleTapResetTimerRef = useRef<number | null>(null);
 
   const isMonthlyView = viewMode === "monthly";
   const isYearlyView = viewMode === "yearly";
@@ -550,9 +555,36 @@ export default function EntryTable({
   }, [selectedEntry]);
 
   useEffect(() => {
+    if (!selectedYearlyRow) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedYearlyRow(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [selectedYearlyRow]);
+
+  useEffect(() => {
     return () => {
       if (doubleTapResetTimerRef.current !== null) {
         window.clearTimeout(doubleTapResetTimerRef.current);
+      }
+
+      if (yearlyDoubleTapResetTimerRef.current !== null) {
+        window.clearTimeout(yearlyDoubleTapResetTimerRef.current);
       }
     };
   }, []);
@@ -595,6 +627,43 @@ export default function EntryTable({
       lastTappedEntryIdRef.current = null;
       lastTapTimeRef.current = 0;
       doubleTapResetTimerRef.current = null;
+    }, 350);
+  };
+
+  const handleYearlyRowTap = (row: YearlyRowWithFixedExpense) => {
+    const isMobileOrTablet = window.matchMedia("(max-width: 980px)").matches;
+
+    if (!isMobileOrTablet) {
+      return;
+    }
+
+    const now = Date.now();
+    const isSameMonth = lastTappedYearlyMonthRef.current === row.month;
+    const isWithinDoubleTapDelay = now - lastYearlyTapTimeRef.current <= 350;
+
+    if (isSameMonth && isWithinDoubleTapDelay) {
+      if (yearlyDoubleTapResetTimerRef.current !== null) {
+        window.clearTimeout(yearlyDoubleTapResetTimerRef.current);
+      }
+
+      lastTappedYearlyMonthRef.current = null;
+      lastYearlyTapTimeRef.current = 0;
+      yearlyDoubleTapResetTimerRef.current = null;
+      setSelectedYearlyRow(row);
+      return;
+    }
+
+    lastTappedYearlyMonthRef.current = row.month;
+    lastYearlyTapTimeRef.current = now;
+
+    if (yearlyDoubleTapResetTimerRef.current !== null) {
+      window.clearTimeout(yearlyDoubleTapResetTimerRef.current);
+    }
+
+    yearlyDoubleTapResetTimerRef.current = window.setTimeout(() => {
+      lastTappedYearlyMonthRef.current = null;
+      lastYearlyTapTimeRef.current = 0;
+      yearlyDoubleTapResetTimerRef.current = null;
     }, 350);
   };
 
@@ -1220,7 +1289,8 @@ export default function EntryTable({
           ) : null}
         </>
       ) : (
-        <div className="table-wrapper">
+        <>
+          <div className="table-wrapper">
           <table className="entries-table yearly-entries-table">
             <thead>
               <tr>
@@ -1242,7 +1312,21 @@ export default function EntryTable({
 
             <tbody>
               {yearlyRowsWithExpenses.map((row) => (
-                <tr key={row.month}>
+                <tr
+                  key={row.month}
+                  className="entry-data-row"
+                  onClick={() => handleYearlyRowTap(row)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      window.matchMedia("(max-width: 980px)").matches
+                    ) {
+                      setSelectedYearlyRow(row);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-label={`Double tap to view ${row.monthName} ${year} summary`}
+                >
                   <td data-label="Month">
                     <strong>{row.monthName}</strong>
                   </td>
@@ -1348,7 +1432,100 @@ export default function EntryTable({
               </tr>
             </tfoot>
           </table>
-        </div>
+          </div>
+
+          {selectedYearlyRow ? (
+            <div
+              className="entry-details-backdrop"
+              role="presentation"
+              onMouseDown={() => setSelectedYearlyRow(null)}
+            >
+              <section
+                className="entry-details-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="yearly-entry-details-title"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <header className="entry-details-modal-header">
+                  <div>
+                    <p className="section-kicker">Monthly Summary</p>
+                    <h2 id="yearly-entry-details-title">Month Details</h2>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="entry-details-close-button"
+                    onClick={() => setSelectedYearlyRow(null)}
+                    aria-label="Close month details"
+                    title="Close"
+                  >
+                    <CloseIcon />
+                  </button>
+                </header>
+
+                <div className="entry-details-list">
+                  <div className="entry-details-row">
+                    <span>Month</span>
+                    <strong>{`${selectedYearlyRow.monthName} ${year}`}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Entries</span>
+                    <strong>{selectedYearlyRow.entryCount}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Sales</span>
+                    <strong>{selectedYearlyRow.totalSales}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Cash</span>
+                    <strong>{formatCurrency(selectedYearlyRow.totalCash)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>PhonePe / UPI</span>
+                    <strong>{formatCurrency(selectedYearlyRow.totalPhonePe)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Total Collection</span>
+                    <strong>{formatCurrency(selectedYearlyRow.totalCollection)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Expense</span>
+                    <strong>{formatCurrency(selectedYearlyRow.totalExpense)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Shop Rent</span>
+                    <strong>{formatCurrency(selectedYearlyRow.shopRent)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Shopkeeper Salary</span>
+                    <strong>{formatCurrency(selectedYearlyRow.shopkeeperSalary)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Electricity Bill</span>
+                    <strong>{formatCurrency(selectedYearlyRow.electricityBill)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Fixed Monthly Expenses</span>
+                    <strong>{formatCurrency(selectedYearlyRow.totalFixedExpense)}</strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Sales Profit</span>
+                    <strong className={selectedYearlyRow.totalProfit >= 0 ? "profit-text" : "loss-text"}>
+                      {formatCurrency(selectedYearlyRow.totalProfit)}
+                    </strong>
+                  </div>
+                  <div className="entry-details-row">
+                    <span>Net Profit</span>
+                    <strong className={selectedYearlyRow.netProfit >= 0 ? "profit-text" : "loss-text"}>
+                      {formatCurrency(selectedYearlyRow.netProfit)}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : null}
+        </>
       )}
     </section>
   );
