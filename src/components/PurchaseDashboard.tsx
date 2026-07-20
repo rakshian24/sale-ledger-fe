@@ -1419,7 +1419,7 @@ export default function PurchaseDashboard({
               <div className="price-stats">
                 <div>
                   <span>Quantity</span>
-                  <strong>{history.summary.totalQuantity}</strong>
+                  <strong>{`${history.summary.totalQuantity} ${history.product.defaultUnit}`}</strong>
                 </div>
                 <div>
                   <span>Total spent</span>
