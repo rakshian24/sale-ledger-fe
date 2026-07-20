@@ -240,6 +240,21 @@ h2 {
   justify-content: space-between;
 }
 
+.purchase-report-controls {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+}
+
+.purchase-report-download {
+  white-space: nowrap;
+}
+
+.purchase-report-download svg {
+  width: 20px;
+  height: 20px;
+}
+
 .purchase-date-filters .field {
   min-width: 170px;
 }
@@ -2879,6 +2894,11 @@ h2 {
     flex-direction: column;
   }
 
+  .purchase-report-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .purchase-main-grid .entry-form {
     grid-template-columns: 1fr;
   }
@@ -2918,6 +2938,15 @@ h2 {
   .compact-setup-form {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .purchase-report-controls {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .purchase-report-download {
+    width: 100%;
   }
 
   .purchase-date-filters .field,

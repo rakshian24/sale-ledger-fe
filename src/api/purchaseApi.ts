@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { API_BASE_URL, apiClient, getToken } from "./apiClient";
 import type {
   CategoryPurchaseTotal,
   ProductHistoryResponse,
@@ -85,3 +85,23 @@ export const getProductPurchaseHistory = async (
   apiClient<ProductHistoryResponse>(
     `/purchases/products/${productId}/history?${rangeQuery(from, to)}`,
   );
+
+export const downloadPurchasePdfReport = async (
+  from: string,
+  to: string,
+): Promise<Blob> => {
+  const token = getToken();
+  const response = await fetch(
+    `${API_BASE_URL}/purchases/report/pdf?${rangeQuery(from, to)}`,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    },
+  );
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message || "Unable to download purchase report");
+  }
+
+  return response.blob();
+};

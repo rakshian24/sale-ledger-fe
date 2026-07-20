@@ -4,6 +4,7 @@ import {
   createPurchaseCategory,
   createPurchaseProduct,
   deletePurchase,
+  downloadPurchasePdfReport,
   getProductPurchaseHistory,
   getPurchaseCategories,
   getPurchases,
@@ -134,6 +135,7 @@ export default function PurchaseDashboard({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
   const [error, setError] = useState("");
 
   const loadReferenceData = useCallback(async () => {
@@ -321,6 +323,28 @@ export default function PurchaseDashboard({
     }
   };
 
+  const downloadReport = async () => {
+    setError("");
+    setIsDownloadingReport(true);
+    try {
+      const report = await downloadPurchasePdfReport(from, to);
+      const url = URL.createObjectURL(report);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `purchase-report-${from}-to-${to}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to download purchase report",
+      );
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  };
+
   const selectProduct = (productId: string) => {
     const product = products.find((item) => item._id === productId);
     setForm((current) => ({
@@ -443,7 +467,20 @@ export default function PurchaseDashboard({
           <p className="section-kicker">Purchase period</p>
           <h2>Purchase Report</h2>
         </div>
-        <div className="purchase-date-filters">
+        <div className="purchase-report-controls">
+          <button
+            type="button"
+            className="download-report-button purchase-report-download"
+            disabled={!isOnline || isDownloadingReport || purchases.length === 0}
+            onClick={downloadReport}
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3V15M12 15L7 10M12 15L17 10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5 20H19" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
+            {isDownloadingReport ? "Preparing report..." : "Download Purchase Report"}
+          </button>
+          <div className="purchase-date-filters">
           <label className="field">
             <span>From</span>
             <input
@@ -460,6 +497,7 @@ export default function PurchaseDashboard({
               onChange={(e) => setTo(e.target.value)}
             />
           </label>
+          </div>
         </div>
       </section>
 
