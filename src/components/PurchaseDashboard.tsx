@@ -81,6 +81,9 @@ export default function PurchaseDashboard({
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [summary, setSummary] = useState<PurchaseSummary>(EMPTY_SUMMARY);
   const [categoryTotals, setCategoryTotals] = useState<CategoryPurchaseTotal[]>([]);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
+    null,
+  );
   const [history, setHistory] = useState<ProductHistoryResponse | null>(null);
   const [historyProductId, setHistoryProductId] = useState("");
   const [form, setForm] = useState<PurchasePayload>(emptyPurchaseForm);
@@ -310,6 +313,53 @@ export default function PurchaseDashboard({
     0,
   );
 
+  const categoryProductTotals = useMemo(() => {
+    const grouped = new Map<
+      string,
+      {
+        productId: string;
+        productName: string;
+        unit: string;
+        totalQuantity: number;
+        totalSpent: number;
+        purchaseCount: number;
+      }[]
+    >();
+
+    purchases.forEach((purchase) => {
+      const categoryId = String(purchase.categoryId);
+      const categoryProducts = grouped.get(categoryId) ?? [];
+      const existingProduct = categoryProducts.find(
+        (item) =>
+          item.productId === String(purchase.productId) &&
+          item.unit === purchase.unit,
+      );
+
+      if (existingProduct) {
+        existingProduct.totalQuantity += purchase.quantity;
+        existingProduct.totalSpent += purchase.totalAmount;
+        existingProduct.purchaseCount += 1;
+      } else {
+        categoryProducts.push({
+          productId: String(purchase.productId),
+          productName: purchase.productName,
+          unit: purchase.unit,
+          totalQuantity: purchase.quantity,
+          totalSpent: purchase.totalAmount,
+          purchaseCount: 1,
+        });
+      }
+
+      grouped.set(categoryId, categoryProducts);
+    });
+
+    grouped.forEach((items) =>
+      items.sort((first, second) => second.totalSpent - first.totalSpent),
+    );
+
+    return grouped;
+  }, [purchases]);
+
   return (
     <div className="purchase-dashboard">
       <section className="card purchase-filter-card">
@@ -428,7 +478,66 @@ export default function PurchaseDashboard({
       <div className="purchase-report-grid">
         <section className="card">
           <div className="section-heading"><div><p className="section-kicker">Spending</p><h2>By Category</h2></div></div>
-          {categoryTotals.length === 0 ? <p className="empty-state">No category spending yet.</p> : <div className="category-spend-list">{categoryTotals.map((category) => <div key={category._id}><span>{category.categoryName}<small>{category.purchaseCount} entries</small></span><strong>{formatCurrency(category.totalSpent)}</strong></div>)}</div>}
+          {categoryTotals.length === 0 ? (
+            <p className="empty-state">No category spending yet.</p>
+          ) : (
+            <div className="category-spend-list">
+              {categoryTotals.map((category) => {
+                const categoryId = String(category._id);
+                const isExpanded = expandedCategoryId === categoryId;
+                const productTotals = categoryProductTotals.get(categoryId) ?? [];
+
+                return (
+                  <div className="category-spend-group" key={categoryId}>
+                    <button
+                      type="button"
+                      className="category-spend-row"
+                      aria-expanded={isExpanded}
+                      onClick={() =>
+                        setExpandedCategoryId(isExpanded ? null : categoryId)
+                      }
+                    >
+                      <span>
+                        {category.categoryName}
+                        <small>{category.purchaseCount} entries</small>
+                      </span>
+                      <span className="category-spend-value">
+                        <strong>{formatCurrency(category.totalSpent)}</strong>
+                        <span className="category-expand-icon" aria-hidden="true">
+                          {isExpanded ? "−" : "+"}
+                        </span>
+                      </span>
+                    </button>
+
+                    {isExpanded ? (
+                      <div className="category-product-breakdown">
+                        <div className="category-product-heading">
+                          <span>Product</span>
+                          <span>Quantity</span>
+                          <span>Total</span>
+                        </div>
+                        {productTotals.map((item) => (
+                          <div
+                            className="category-product-row"
+                            key={`${item.productId}-${item.unit}`}
+                          >
+                            <span>
+                              <strong>{item.productName}</strong>
+                              <small>{item.purchaseCount} entries</small>
+                            </span>
+                            <span>
+                              {item.totalQuantity} {item.unit}
+                            </span>
+                            <strong>{formatCurrency(item.totalSpent)}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
         <section className="card">
           <div className="section-heading"><div><p className="section-kicker">Product report</p><h2>Price History</h2></div></div>

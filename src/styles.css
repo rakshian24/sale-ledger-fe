@@ -392,6 +392,106 @@ h2 {
   font-weight: 700;
 }
 
+.category-spend-list > .category-spend-group {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  align-items: stretch;
+  justify-content: stretch;
+  justify-self: stretch;
+}
+
+.category-spend-row {
+  width: 100%;
+  max-width: none;
+  min-height: 62px;
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  background: transparent;
+  color: #111827;
+  text-align: left;
+  cursor: pointer;
+}
+
+.category-spend-row:hover,
+.category-spend-row[aria-expanded="true"] {
+  background: #f1f5f9;
+}
+
+.category-spend-value {
+  display: flex !important;
+  grid-template-columns: none;
+  margin-left: auto;
+  align-items: center;
+  gap: 10px !important;
+  white-space: nowrap;
+}
+
+.category-expand-icon {
+  width: 26px;
+  height: 26px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.category-product-breakdown {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0 14px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.category-product-heading,
+.category-product-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(90px, 0.8fr) minmax(90px, 0.8fr);
+  gap: 12px;
+  align-items: center;
+  padding: 11px 4px;
+}
+
+.category-product-heading {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.category-product-row {
+  border-top: 1px dashed #e2e8f0;
+}
+
+.category-product-row > span:first-child {
+  min-width: 0;
+}
+
+.category-product-row strong {
+  overflow-wrap: anywhere;
+}
+
+.category-product-row > :last-child,
+.category-product-heading > :last-child {
+  text-align: right;
+}
+
 .price-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2678,5 +2778,17 @@ h2 {
   .price-history-list > div {
     grid-template-columns: 1fr;
     gap: 5px;
+  }
+
+  .category-product-heading {
+    display: none;
+  }
+
+  .category-product-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .category-product-row > span:first-child {
+    grid-column: 1 / -1;
   }
 }
