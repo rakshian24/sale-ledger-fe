@@ -20,7 +20,11 @@ import type {
   PurchaseProduct,
   PurchaseSummary,
 } from "../types/purchase";
-import { formatCurrency, getTodayDateInputValue } from "../utils/formatters";
+import {
+  formatCurrency,
+  formatDateDDMMMYYYY,
+  getTodayDateInputValue,
+} from "../utils/formatters";
 
 type PurchaseDashboardProps = {
   isOnline: boolean;
@@ -80,7 +84,9 @@ export default function PurchaseDashboard({
   const [products, setProducts] = useState<PurchaseProduct[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [summary, setSummary] = useState<PurchaseSummary>(EMPTY_SUMMARY);
-  const [categoryTotals, setCategoryTotals] = useState<CategoryPurchaseTotal[]>([]);
+  const [categoryTotals, setCategoryTotals] = useState<CategoryPurchaseTotal[]>(
+    [],
+  );
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
     null,
   );
@@ -152,7 +158,9 @@ export default function PurchaseDashboard({
     getProductPurchaseHistory(historyProductId, from, to)
       .then(setHistory)
       .catch((err) =>
-        setError(err instanceof Error ? err.message : "Unable to load price history"),
+        setError(
+          err instanceof Error ? err.message : "Unable to load price history",
+        ),
       );
   }, [historyProductId, from, to, isOnline, purchases]);
 
@@ -166,7 +174,9 @@ export default function PurchaseDashboard({
       setCategoryName("");
       await loadReferenceData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create category");
+      setError(
+        err instanceof Error ? err.message : "Unable to create category",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -268,7 +278,9 @@ export default function PurchaseDashboard({
       await deletePurchase(purchase._id);
       await loadPurchases();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to delete purchase");
+      setError(
+        err instanceof Error ? err.message : "Unable to delete purchase",
+      );
     }
   };
 
@@ -305,7 +317,9 @@ export default function PurchaseDashboard({
   };
 
   const removeBatchItem = (index: number) => {
-    setBatchItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setBatchItems((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index),
+    );
   };
 
   const batchTotal = batchItems.reduce(
@@ -368,24 +382,62 @@ export default function PurchaseDashboard({
           <h2>Purchase Report</h2>
         </div>
         <div className="purchase-date-filters">
-          <label className="field"><span>From</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-          <label className="field"><span>To</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+          <label className="field">
+            <span>From</span>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>To</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </label>
         </div>
       </section>
 
       {error ? <p className="error-message">{error}</p> : null}
 
       <section className="summary-grid purchase-summary-grid">
-        <article className="summary-card"><span>Total purchased</span><strong>{formatCurrency(summary.totalSpent)}</strong></article>
-        <article className="summary-card"><span>Purchase entries</span><strong>{summary.purchaseCount}</strong></article>
-        <article className="summary-card"><span>Highest-spend category</span><strong>{categoryTotals[0]?.categoryName || "—"}</strong><small>{categoryTotals[0] ? formatCurrency(categoryTotals[0].totalSpent) : "No purchases"}</small></article>
-        <article className="summary-card"><span>Products available</span><strong>{products.length}</strong></article>
+        <article className="summary-card">
+          <span>Total purchased</span>
+          <strong>{formatCurrency(summary.totalSpent)}</strong>
+        </article>
+        <article className="summary-card">
+          <span>Purchase entries</span>
+          <strong>{summary.purchaseCount}</strong>
+        </article>
+        <article className="summary-card">
+          <span>Highest-spend category</span>
+          <strong>{categoryTotals[0]?.categoryName || "—"}</strong>
+          <small>
+            {categoryTotals[0]
+              ? formatCurrency(categoryTotals[0].totalSpent)
+              : "No purchases"}
+          </small>
+        </article>
+        <article className="summary-card">
+          <span>Products available</span>
+          <strong>{products.length}</strong>
+        </article>
       </section>
 
       <div className="purchase-main-grid">
         <section className="card">
-          <div className="section-heading"><div><p className="section-kicker">{editing ? "Edit" : "Add"}</p><h2>{editing ? "Edit Purchase" : "New Purchase"}</h2></div></div>
-          {products.length === 0 ? <p className="empty-state">Create a category and product first.</p> : null}
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">{editing ? "Edit" : "Add"}</p>
+              <h2>{editing ? "Edit Purchase" : "New Purchase"}</h2>
+            </div>
+          </div>
+          {products.length === 0 ? (
+            <p className="empty-state">Create a category and product first.</p>
+          ) : null}
           <form className="entry-form" onSubmit={submitPurchase}>
             <label className="field">
               <span>Date</span>
@@ -403,12 +455,60 @@ export default function PurchaseDashboard({
 
             {editing ? (
               <>
-                <label className="field"><span>Product</span><select required value={form.productId} onChange={(e) => selectProduct(e.target.value)}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
+                <label className="field">
+                  <span>Product</span>
+                  <select
+                    required
+                    value={form.productId}
+                    onChange={(e) => selectProduct(e.target.value)}
+                  >
+                    <option value="">Select product</option>
+                    {products.map((product) => (
+                      <option key={product._id} value={product._id}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <div className="purchase-form-row">
-                  <label className="field"><span>Quantity</span><input required min="0.001" step="any" type="number" value={form.quantity || ""} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} /></label>
-                  <label className="field"><span>Unit</span><input required value={form.unit} placeholder="kg, piece, litre" onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
+                  <label className="field">
+                    <span>Quantity</span>
+                    <input
+                      required
+                      min="0.001"
+                      step="any"
+                      type="number"
+                      value={form.quantity || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, quantity: Number(e.target.value) })
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Unit</span>
+                    <input
+                      required
+                      value={form.unit}
+                      placeholder="kg, piece, litre"
+                      onChange={(e) =>
+                        setForm({ ...form, unit: e.target.value })
+                      }
+                    />
+                  </label>
                 </div>
-                <label className="field"><span>Price per unit</span><input required min="0" step="0.01" type="number" value={form.unitPrice || ""} onChange={(e) => setForm({ ...form, unitPrice: Number(e.target.value) })} /></label>
+                <label className="field">
+                  <span>Price per unit</span>
+                  <input
+                    required
+                    min="0"
+                    step="0.01"
+                    type="number"
+                    value={form.unitPrice || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, unitPrice: Number(e.target.value) })
+                    }
+                  />
+                </label>
               </>
             ) : (
               <div className="purchase-items-editor">
@@ -427,13 +527,72 @@ export default function PurchaseDashboard({
                         </button>
                       ) : null}
                     </div>
-                    <label className="field"><span>Product</span><select required value={item.productId} onChange={(e) => selectBatchProduct(index, e.target.value)}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
+                    <label className="field">
+                      <span>Product</span>
+                      <select
+                        required
+                        value={item.productId}
+                        onChange={(e) =>
+                          selectBatchProduct(index, e.target.value)
+                        }
+                      >
+                        <option value="">Select product</option>
+                        {products.map((product) => (
+                          <option key={product._id} value={product._id}>
+                            {product.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <div className="purchase-form-row">
-                      <label className="field"><span>Quantity</span><input required min="0.001" step="any" type="number" value={item.quantity || ""} onChange={(e) => updateBatchItem(index, { quantity: Number(e.target.value) })} /></label>
-                      <label className="field"><span>Unit</span><input required value={item.unit} placeholder="kg, piece, litre" onChange={(e) => updateBatchItem(index, { unit: e.target.value })} /></label>
+                      <label className="field">
+                        <span>Quantity</span>
+                        <input
+                          required
+                          min="0.001"
+                          step="any"
+                          type="number"
+                          value={item.quantity || ""}
+                          onChange={(e) =>
+                            updateBatchItem(index, {
+                              quantity: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Unit</span>
+                        <input
+                          required
+                          value={item.unit}
+                          placeholder="kg, piece, litre"
+                          onChange={(e) =>
+                            updateBatchItem(index, { unit: e.target.value })
+                          }
+                        />
+                      </label>
                     </div>
-                    <label className="field"><span>Price per unit</span><input required min="0" step="0.01" type="number" value={item.unitPrice || ""} onChange={(e) => updateBatchItem(index, { unitPrice: Number(e.target.value) })} /></label>
-                    <div className="purchase-item-subtotal"><span>Item total</span><strong>{formatCurrency(item.quantity * item.unitPrice)}</strong></div>
+                    <label className="field">
+                      <span>Price per unit</span>
+                      <input
+                        required
+                        min="0"
+                        step="0.01"
+                        type="number"
+                        value={item.unitPrice || ""}
+                        onChange={(e) =>
+                          updateBatchItem(index, {
+                            unitPrice: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <div className="purchase-item-subtotal">
+                      <span>Item total</span>
+                      <strong>
+                        {formatCurrency(item.quantity * item.unitPrice)}
+                      </strong>
+                    </div>
                   </div>
                 ))}
                 <button
@@ -447,37 +606,228 @@ export default function PurchaseDashboard({
               </div>
             )}
 
-            <label className="field"><span>Supplier (optional)</span><input value={editing ? form.supplier : batchSupplier} onChange={(e) => editing ? setForm({ ...form, supplier: e.target.value }) : setBatchSupplier(e.target.value)} /></label>
-            <label className="field"><span>Note (optional)</span><textarea rows={2} value={editing ? form.note : batchNote} onChange={(e) => editing ? setForm({ ...form, note: e.target.value }) : setBatchNote(e.target.value)} /></label>
-            <div className="calculated-preview"><div><span>{editing ? "Purchase total" : "All items total"}</span><strong>{formatCurrency(editing ? form.quantity * form.unitPrice : batchTotal)}</strong></div></div>
-            <div className="actions"><button disabled={!isOnline || isSaving || products.length === 0} type="submit">{editing ? "Update Purchase" : `Save ${batchItems.length} Purchase${batchItems.length === 1 ? "" : "s"}`}</button>{editing ? <button className="secondary-button" type="button" onClick={() => { setEditing(null); setForm(emptyPurchaseForm()); }}>Cancel</button> : null}</div>
+            <label className="field">
+              <span>Supplier (optional)</span>
+              <input
+                value={editing ? form.supplier : batchSupplier}
+                onChange={(e) =>
+                  editing
+                    ? setForm({ ...form, supplier: e.target.value })
+                    : setBatchSupplier(e.target.value)
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Note (optional)</span>
+              <textarea
+                rows={2}
+                value={editing ? form.note : batchNote}
+                onChange={(e) =>
+                  editing
+                    ? setForm({ ...form, note: e.target.value })
+                    : setBatchNote(e.target.value)
+                }
+              />
+            </label>
+            <div className="calculated-preview">
+              <div>
+                <span>{editing ? "Purchase total" : "All items total"}</span>
+                <strong>
+                  {formatCurrency(
+                    editing ? form.quantity * form.unitPrice : batchTotal,
+                  )}
+                </strong>
+              </div>
+            </div>
+            <div className="actions">
+              <button
+                disabled={!isOnline || isSaving || products.length === 0}
+                type="submit"
+              >
+                {editing
+                  ? "Update Purchase"
+                  : `Save ${batchItems.length} Purchase${batchItems.length === 1 ? "" : "s"}`}
+              </button>
+              {editing ? (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setEditing(null);
+                    setForm(emptyPurchaseForm());
+                  }}
+                >
+                  Cancel
+                </button>
+              ) : null}
+            </div>
           </form>
         </section>
 
         <section className="card purchase-setup-card">
-          <div className="section-heading"><div><p className="section-kicker">Setup</p><h2>Categories & Products</h2></div></div>
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">Setup</p>
+              <h2>Categories & Products</h2>
+            </div>
+          </div>
           <form className="compact-setup-form" onSubmit={submitCategory}>
-            <label className="field"><span>New category</span><input value={categoryName} placeholder="Eg: Vegetables" onChange={(e) => setCategoryName(e.target.value)} /></label>
-            <button disabled={!isOnline || isSaving || !categoryName.trim()} type="submit">Add Category</button>
+            <label className="field">
+              <span>New category</span>
+              <input
+                value={categoryName}
+                placeholder="Eg: Vegetables"
+                onChange={(e) => setCategoryName(e.target.value)}
+              />
+            </label>
+            <button
+              disabled={!isOnline || isSaving || !categoryName.trim()}
+              type="submit"
+            >
+              Add Category
+            </button>
           </form>
-          <div className="purchase-chip-list">{categories.map((category) => <span className="purchase-chip" key={category._id}>{category.name}</span>)}</div>
-          <form className="compact-setup-form product-setup-form" onSubmit={submitProduct}>
-            <label className="field"><span>Product name</span><input value={productForm.name} placeholder="Eg: Beans" onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} /></label>
-            <label className="field"><span>Category</span><select value={productForm.categoryId} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}><option value="">Select category</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select></label>
-            <label className="field"><span>Default unit</span><input value={productForm.defaultUnit} onChange={(e) => setProductForm({ ...productForm, defaultUnit: e.target.value })} /></label>
-            <button disabled={!isOnline || isSaving || !productForm.name.trim() || !productForm.categoryId} type="submit">Add Product</button>
+          <div className="purchase-chip-list">
+            {categories.map((category) => (
+              <span className="purchase-chip" key={category._id}>
+                {category.name}
+              </span>
+            ))}
+          </div>
+          <form
+            className="compact-setup-form product-setup-form"
+            onSubmit={submitProduct}
+          >
+            <label className="field">
+              <span>Product name</span>
+              <input
+                value={productForm.name}
+                placeholder="Eg: Beans"
+                onChange={(e) =>
+                  setProductForm({ ...productForm, name: e.target.value })
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Category</span>
+              <select
+                value={productForm.categoryId}
+                onChange={(e) =>
+                  setProductForm({ ...productForm, categoryId: e.target.value })
+                }
+              >
+                <option value="">Select category</option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Default unit</span>
+              <input
+                value={productForm.defaultUnit}
+                onChange={(e) =>
+                  setProductForm({
+                    ...productForm,
+                    defaultUnit: e.target.value,
+                  })
+                }
+              />
+            </label>
+            <button
+              disabled={
+                !isOnline ||
+                isSaving ||
+                !productForm.name.trim() ||
+                !productForm.categoryId
+              }
+              type="submit"
+            >
+              Add Product
+            </button>
           </form>
         </section>
       </div>
 
       <section className="card records-card">
-        <div className="section-heading records-heading"><div><p className="section-kicker">History</p><h2>Purchase Entries</h2></div></div>
-        {isLoading ? <div className="records-loader" /> : purchases.length === 0 ? <p className="empty-state">No purchases in this period.</p> : <div className="table-wrapper"><table className="entries-table purchase-table"><thead><tr><th>Date</th><th>Product</th><th>Category</th><th>Quantity</th><th>Unit price</th><th>Total</th><th>Supplier</th><th>Actions</th></tr></thead><tbody>{purchases.map((purchase) => <tr key={purchase._id}><td>{purchase.purchaseDate}</td><td>{purchase.productName}</td><td>{purchase.categoryName}</td><td>{purchase.quantity} {purchase.unit}</td><td>{formatCurrency(purchase.unitPrice)}</td><td><strong>{formatCurrency(purchase.totalAmount)}</strong></td><td>{purchase.supplier || "—"}</td><td><div className="table-actions"><button onClick={() => startEditing(purchase)}>Edit</button><button className="danger-button" onClick={() => removePurchase(purchase)}>Delete</button></div></td></tr>)}</tbody><tfoot><tr className="total-row"><td>Total</td><td colSpan={4}>{purchases.length} entries</td><td>{formatCurrency(summary.totalSpent)}</td><td colSpan={2} /></tr></tfoot></table></div>}
+        <div className="section-heading records-heading">
+          <div>
+            <p className="section-kicker">History</p>
+            <h2>Purchase Entries</h2>
+          </div>
+        </div>
+        {isLoading ? (
+          <div className="records-loader" />
+        ) : purchases.length === 0 ? (
+          <p className="empty-state">No purchases in this period.</p>
+        ) : (
+          <div className="table-wrapper">
+            <table className="entries-table purchase-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Quantity</th>
+                  <th>Unit price</th>
+                  <th>Total</th>
+                  <th>Supplier</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchases.map((purchase) => (
+                  <tr key={purchase._id}>
+                    <td>{formatDateDDMMMYYYY(purchase.purchaseDate)}</td>
+                    <td>{purchase.productName}</td>
+                    <td>{purchase.categoryName}</td>
+                    <td>
+                      {purchase.quantity} {purchase.unit}
+                    </td>
+                    <td>{formatCurrency(purchase.unitPrice)}</td>
+                    <td>
+                      <strong>{formatCurrency(purchase.totalAmount)}</strong>
+                    </td>
+                    <td>{purchase.supplier || "—"}</td>
+                    <td>
+                      <div className="table-actions">
+                        <button onClick={() => startEditing(purchase)}>
+                          Edit
+                        </button>
+                        <button
+                          className="danger-button"
+                          onClick={() => removePurchase(purchase)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="total-row">
+                  <td>Total</td>
+                  <td colSpan={4}>{purchases.length} entries</td>
+                  <td>{formatCurrency(summary.totalSpent)}</td>
+                  <td colSpan={2} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </section>
 
       <div className="purchase-report-grid">
         <section className="card">
-          <div className="section-heading"><div><p className="section-kicker">Spending</p><h2>By Category</h2></div></div>
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">Spending</p>
+              <h2>By Category</h2>
+            </div>
+          </div>
           {categoryTotals.length === 0 ? (
             <p className="empty-state">No category spending yet.</p>
           ) : (
@@ -485,7 +835,8 @@ export default function PurchaseDashboard({
               {categoryTotals.map((category) => {
                 const categoryId = String(category._id);
                 const isExpanded = expandedCategoryId === categoryId;
-                const productTotals = categoryProductTotals.get(categoryId) ?? [];
+                const productTotals =
+                  categoryProductTotals.get(categoryId) ?? [];
 
                 return (
                   <div className="category-spend-group" key={categoryId}>
@@ -503,7 +854,10 @@ export default function PurchaseDashboard({
                       </span>
                       <span className="category-spend-value">
                         <strong>{formatCurrency(category.totalSpent)}</strong>
-                        <span className="category-expand-icon" aria-hidden="true">
+                        <span
+                          className="category-expand-icon"
+                          aria-hidden="true"
+                        >
                           {isExpanded ? "−" : "+"}
                         </span>
                       </span>
@@ -540,9 +894,70 @@ export default function PurchaseDashboard({
           )}
         </section>
         <section className="card">
-          <div className="section-heading"><div><p className="section-kicker">Product report</p><h2>Price History</h2></div></div>
-          <label className="field"><span>Product</span><select value={historyProductId} onChange={(e) => setHistoryProductId(e.target.value)}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
-          {history ? <><div className="price-stats"><div><span>Quantity</span><strong>{history.summary.totalQuantity}</strong></div><div><span>Total spent</span><strong>{formatCurrency(history.summary.totalSpent)}</strong></div><div><span>Average price</span><strong>{formatCurrency(history.summary.averageUnitPrice)}</strong></div><div><span>Price range</span><strong>{formatCurrency(history.summary.lowestUnitPrice)} – {formatCurrency(history.summary.highestUnitPrice)}</strong></div></div><div className="price-history-list">{history.priceHistory.map((row) => <div key={row._id}><span>{row.purchaseDate}</span><span>{row.quantity} {row.unit}</span><strong>{formatCurrency(row.unitPrice)}/{row.unit}</strong></div>)}</div></> : <p className="empty-state purchase-history-empty">Select a product to inspect its historic prices.</p>}
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">Product report</p>
+              <h2>Price History</h2>
+            </div>
+          </div>
+          <label className="field">
+            <span>Product</span>
+            <select
+              value={historyProductId}
+              onChange={(e) => setHistoryProductId(e.target.value)}
+            >
+              <option value="">Select product</option>
+              {products.map((product) => (
+                <option key={product._id} value={product._id}>
+                  {product.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {history ? (
+            <>
+              <div className="price-stats">
+                <div>
+                  <span>Quantity</span>
+                  <strong>{history.summary.totalQuantity}</strong>
+                </div>
+                <div>
+                  <span>Total spent</span>
+                  <strong>{formatCurrency(history.summary.totalSpent)}</strong>
+                </div>
+                <div>
+                  <span>Average price</span>
+                  <strong>
+                    {formatCurrency(history.summary.averageUnitPrice)}
+                  </strong>
+                </div>
+                <div>
+                  <span>Price range</span>
+                  <strong>
+                    {formatCurrency(history.summary.lowestUnitPrice)} –{" "}
+                    {formatCurrency(history.summary.highestUnitPrice)}
+                  </strong>
+                </div>
+              </div>
+              <div className="price-history-list">
+                {history.priceHistory.map((row) => (
+                  <div key={row._id}>
+                    <span>{row.purchaseDate}</span>
+                    <span>
+                      {row.quantity} {row.unit}
+                    </span>
+                    <strong>
+                      {formatCurrency(row.unitPrice)}/{row.unit}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="empty-state purchase-history-empty">
+              Select a product to inspect its historic prices.
+            </p>
+          )}
         </section>
       </div>
     </div>
