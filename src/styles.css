@@ -3005,6 +3005,16 @@ h2 {
     margin: 0 18px 18px;
   }
 
+  .purchase-day-table {
+    min-width: 600px;
+  }
+
+  .purchase-day-table th,
+  .purchase-day-table td {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
   .purchase-days-grid {
     grid-template-columns: repeat(7, minmax(28px, 1fr));
   }

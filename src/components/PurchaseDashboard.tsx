@@ -31,6 +31,31 @@ type PurchaseDashboardProps = {
   isOnline: boolean;
 };
 
+function PencilActionIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M16.862 4.487L19.55 7.175M5.25 18.75L8.45 17.95C8.87 17.845 9.255 17.63 9.562 17.323L20.237 6.648C20.94 5.945 20.94 4.805 20.237 4.102L19.898 3.763C19.195 3.06 18.055 3.06 17.352 3.763L6.677 14.438C6.37 14.745 6.155 15.13 6.05 15.55L5.25 18.75Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TrashActionIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M9 3H15L16 7H8L9 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M6.5 7L7.25 20H16.75L17.5 7" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M10 11V16M14 11V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const getMonthRange = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -338,7 +363,9 @@ export default function PurchaseDashboard({
       URL.revokeObjectURL(url);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to download purchase report",
+        err instanceof Error
+          ? err.message
+          : "Unable to download purchase report",
       );
     } finally {
       setIsDownloadingReport(false);
@@ -471,32 +498,47 @@ export default function PurchaseDashboard({
           <button
             type="button"
             className="download-report-button purchase-report-download"
-            disabled={!isOnline || isDownloadingReport || purchases.length === 0}
+            disabled={
+              !isOnline || isDownloadingReport || purchases.length === 0
+            }
             onClick={downloadReport}
           >
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 3V15M12 15L7 10M12 15L17 10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M5 20H19" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              <path
+                d="M12 3V15M12 15L7 10M12 15L17 10"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5 20H19"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
             </svg>
-            {isDownloadingReport ? "Preparing report..." : "Download Purchase Report"}
+            {isDownloadingReport
+              ? "Preparing report..."
+              : "Download Purchased Report"}
           </button>
           <div className="purchase-date-filters">
-          <label className="field">
-            <span>From</span>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>To</span>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </label>
+            <label className="field">
+              <span>From</span>
+              <input
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>To</span>
+              <input
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </label>
           </div>
         </div>
       </section>
@@ -927,14 +969,31 @@ export default function PurchaseDashboard({
                     <td>{purchase.supplier || "—"}</td>
                     <td>
                       <div className="table-actions">
-                        <button onClick={() => startEditing(purchase)}>
-                          Edit
+                        <button
+                          type="button"
+                          className="table-action-button edit-action-button"
+                          disabled={!isOnline}
+                          aria-label={`Edit ${purchase.productName} purchase for ${formatDateDDMMMYYYY(purchase.purchaseDate)}`}
+                          title="Edit purchase"
+                          onClick={() => startEditing(purchase)}
+                        >
+                          <span className="table-action-text">Edit</span>
+                          <span className="table-action-icon">
+                            <PencilActionIcon />
+                          </span>
                         </button>
                         <button
-                          className="danger-button"
+                          type="button"
+                          className="table-action-button delete-action-button danger-button"
+                          disabled={!isOnline}
+                          aria-label={`Delete ${purchase.productName} purchase for ${formatDateDDMMMYYYY(purchase.purchaseDate)}`}
+                          title="Delete purchase"
                           onClick={() => removePurchase(purchase)}
                         >
-                          Delete
+                          <span className="table-action-text">Delete</span>
+                          <span className="table-action-icon">
+                            <TrashActionIcon />
+                          </span>
                         </button>
                       </div>
                     </td>
