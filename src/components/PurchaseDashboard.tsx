@@ -114,6 +114,52 @@ function CloseIcon() {
   );
 }
 
+function SortIcon({
+  direction,
+  isActive,
+}: {
+  direction: "asc" | "desc";
+  isActive: boolean;
+}) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      {isActive ? (
+        direction === "asc" ? (
+          <path
+            d="M10 16V4M5.5 8.5L10 4L14.5 8.5"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : (
+          <path
+            d="M10 4V16M5.5 11.5L10 16L14.5 11.5"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )
+      ) : (
+        <path
+          d="M6.5 15V5M3.5 8L6.5 5L9.5 8M13.5 5V15M10.5 12L13.5 15L16.5 12"
+          stroke="currentColor"
+          strokeWidth="1.65"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+    </svg>
+  );
+}
+
 const getMonthRange = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -150,6 +196,16 @@ type PurchaseItemDraft = Pick<
   PurchasePayload,
   "productId" | "quantity" | "unit" | "unitPrice"
 >;
+
+type CategorySort = {
+  column: "quantity" | "total";
+  direction: "asc" | "desc";
+};
+
+const DEFAULT_CATEGORY_SORT: CategorySort = {
+  column: "total",
+  direction: "desc",
+};
 
 const emptyPurchaseItem = (): PurchaseItemDraft => ({
   productId: "",
@@ -221,6 +277,9 @@ export default function PurchaseDashboard({
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
     null,
   );
+  const [categorySorts, setCategorySorts] = useState<
+    Record<string, CategorySort>
+  >({});
   const [expandedPurchaseDates, setExpandedPurchaseDates] = useState<
     Set<string>
   >(new Set());
@@ -621,6 +680,24 @@ export default function PurchaseDashboard({
 
     return grouped;
   }, [purchases]);
+
+  const changeCategorySort = (
+    categoryId: string,
+    column: CategorySort["column"],
+  ) => {
+    setCategorySorts((current) => {
+      const existing = current[categoryId] ?? DEFAULT_CATEGORY_SORT;
+      const direction =
+        existing.column === column && existing.direction === "desc"
+          ? "asc"
+          : "desc";
+
+      return {
+        ...current,
+        [categoryId]: { column, direction },
+      };
+    });
+  };
 
   const purchaseDays = useMemo(() => {
     const purchasedDates = new Set(purchases.map((item) => item.purchaseDate));
@@ -1321,8 +1398,29 @@ export default function PurchaseDashboard({
               {categoryTotals.map((category) => {
                 const categoryId = String(category._id);
                 const isExpanded = expandedCategoryId === categoryId;
-                const productTotals =
-                  categoryProductTotals.get(categoryId) ?? [];
+                const categorySort =
+                  categorySorts[categoryId] ?? DEFAULT_CATEGORY_SORT;
+                const productTotals = [
+                  ...(categoryProductTotals.get(categoryId) ?? []),
+                ].sort((first, second) => {
+                  const firstValue =
+                    categorySort.column === "quantity"
+                      ? first.totalQuantity
+                      : first.totalSpent;
+                  const secondValue =
+                    categorySort.column === "quantity"
+                      ? second.totalQuantity
+                      : second.totalSpent;
+                  const difference =
+                    categorySort.direction === "asc"
+                      ? firstValue - secondValue
+                      : secondValue - firstValue;
+
+                  return (
+                    difference ||
+                    first.productName.localeCompare(second.productName)
+                  );
+                });
 
                 return (
                   <div className="category-spend-group" key={categoryId}>
@@ -1353,8 +1451,58 @@ export default function PurchaseDashboard({
                       <div className="category-product-breakdown">
                         <div className="category-product-heading">
                           <span>Product</span>
-                          <span>Quantity</span>
-                          <span>Total</span>
+                          <span className="category-product-sort-heading">
+                            Quantity
+                            <button
+                              type="button"
+                              className={
+                                categorySort.column === "quantity"
+                                  ? "category-sort-button category-sort-button-active"
+                                  : "category-sort-button"
+                              }
+                              onClick={() =>
+                                changeCategorySort(categoryId, "quantity")
+                              }
+                              aria-label={`Sort ${category.categoryName} products by quantity ${
+                                categorySort.column === "quantity" &&
+                                categorySort.direction === "desc"
+                                  ? "ascending"
+                                  : "descending"
+                              }`}
+                              title="Sort by quantity"
+                            >
+                              <SortIcon
+                                direction={categorySort.direction}
+                                isActive={categorySort.column === "quantity"}
+                              />
+                            </button>
+                          </span>
+                          <span className="category-product-sort-heading category-product-sort-heading-total">
+                            Total
+                            <button
+                              type="button"
+                              className={
+                                categorySort.column === "total"
+                                  ? "category-sort-button category-sort-button-active"
+                                  : "category-sort-button"
+                              }
+                              onClick={() =>
+                                changeCategorySort(categoryId, "total")
+                              }
+                              aria-label={`Sort ${category.categoryName} products by total ${
+                                categorySort.column === "total" &&
+                                categorySort.direction === "desc"
+                                  ? "ascending"
+                                  : "descending"
+                              }`}
+                              title="Sort by total"
+                            >
+                              <SortIcon
+                                direction={categorySort.direction}
+                                isActive={categorySort.column === "total"}
+                              />
+                            </button>
+                          </span>
                         </div>
                         {productTotals.map((item) => {
                           const dairyLitres = getDairyLitres(
